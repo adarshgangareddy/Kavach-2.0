@@ -53,6 +53,7 @@ caveats) and `eval/results.json`. Targets are scanned statically and never run.
 ```bash
 scripts/install-hook.sh                         # blocks commits with severity >= 7
 SENTINEL_SKIP=1 git commit -m "..."             # bypass once
+sentinel watch --scan                           # as you save: changed functions + findings
 sentinel scan . --diff-base origin/main --format sarif --out sentinel.sarif
 ```
 

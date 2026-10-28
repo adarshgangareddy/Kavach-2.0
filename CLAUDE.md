@@ -20,6 +20,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - Frontend: cd frontend && npm install && npm run dev  (proxies /api to :8000)
 - CLI: sentinel scan PATH [--diff-base REF] [--format text|json|sarif]
 - Hook: scripts/install-hook.sh
+- Watch: sentinel watch [--scan] [--once]  (writes .git/sentinel-status.json)
 - Eval: backend/.venv/bin/python eval/run.py  (writes eval/results.md and results.json)
 
 ## Where things live

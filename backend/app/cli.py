@@ -2,6 +2,8 @@
 
     sentinel scan PATH [--diff-base REF] [--format text|json|sarif] [--out FILE] [--fail-on N]
     sentinel validate-sarif FILE
+    sentinel annotate FILE
+    sentinel watch [--scan] [--once] [--status FILE]
 """
 
 import argparse
@@ -94,7 +96,12 @@ def _annotate(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="sentinel")
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["watch"]:  # its own parser and help text
+        from app.early import watch
+        return watch.main(argv[1:])
+    parser = argparse.ArgumentParser(prog="sentinel",
+                                     epilog="also: sentinel watch --help (monitor changing functions)")
     sub = parser.add_subparsers(dest="command", required=True)
     scan = sub.add_parser("scan", help="scan a project directory")
     scan.add_argument("path", type=Path, nargs="?", default=Path("."))

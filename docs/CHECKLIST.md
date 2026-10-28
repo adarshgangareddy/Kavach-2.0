@@ -12,11 +12,11 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 |---|---|---|---|
 | L1 Ingestion | Must | 4 / 4 | ✅ Complete |
 | L2 Detection | Must | 5 / 7 | 🟡 Taint detector on; ML ranker built but needs real training data; extra rules remain |
-| L3 Early detection | Must (fix-watcher: Stretch) | 3 / 4 | ✅ Must-haves complete |
+| L3 Early detection | Must (fix-watcher: Stretch) | 4 / 5 | ✅ Must-haves complete, plus a write-time watcher |
 | L4 Verification and mitigation | Should | 1 / 4 | 🟡 Confidence tiers only |
 | L5 Reporting and dashboard | Must | 5 / 5 | ✅ Complete |
 | Evaluation | Must for demo | 3 / 4 | 🟡 Results table, ablation and early-detection numbers done; Semgrep not run yet |
-| **Total** | | **21 / 28** | **About 75%. All Must layers work end to end; evaluation numbers recorded** |
+| **Total** | | **22 / 29** | **About 75%. All Must layers work end to end; evaluation numbers recorded** |
 
 ## L1 Ingestion: "Bring your code"
 
@@ -43,6 +43,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ **Pre-commit hook:** checks staged code, blocks on severity ≥ 7 in changed code, bypass with `SENTINEL_SKIP=1` (`scripts/install-hook.sh`)
 - [x] ✅ **Incremental cache:** re-scans only changed files; the whole-program taint detector always sees every file
 - [x] ✅ **PR scan (GitHub Action):** scans the PR diff, annotates changed lines, keeps SARIF as an artifact, uploads to code scanning when available
+- [x] ✅ **Write-time watcher (`sentinel watch`):** polls git every second, records added/modified/removed functions vs HEAD in `.git/sentinel-status.json`; `--scan` prints findings in changed functions as you save (`detected_at: write`)
 - [ ] ⬜ **Fix-watcher (stretch):** watch dependency fixes for patterns that may apply to the project
 
 ## L4 Verification and mitigation: "Prove it, then fix it"
@@ -72,7 +73,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
-- [x] ✅ 163 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ 175 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [ ] ⬜ PR #1 reviewed and merged into `main`
