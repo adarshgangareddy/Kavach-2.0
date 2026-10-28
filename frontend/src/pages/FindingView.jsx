@@ -3,6 +3,8 @@ import { api } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
 import { ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary } from '../components.jsx'
 import PathFlow from '../components/PathFlow.jsx'
+import ShieldLock from '../components/ShieldLock.jsx'
+import VerifiedBadge, { isProven } from '../components/VerifiedBadge.jsx'
 import { chainFor } from '../components/pathLines.js'
 
 const CONTEXT_LINES = 8
@@ -371,6 +373,13 @@ export default function FindingView({ findingId }) {
             <TierPill tier={finding.confidence_tier} />
             <StatusPill status={finding.status} />
           </div>
+          {isProven(finding) && (
+            <p className="proof-head">
+              <ShieldLock key={finding.id} />
+              <VerifiedBadge />
+              <span className="muted small">A harmless test confirmed user input reaches this call.</span>
+            </p>
+          )}
           <h1>{cweTitle(catalog, finding.cwe)}</h1>
           <p className="mono location">{finding.file}:{finding.line}</p>
           <p className="plain">{plainSummary(finding)}</p>

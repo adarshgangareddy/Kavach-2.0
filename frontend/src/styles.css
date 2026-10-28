@@ -520,3 +520,31 @@ img, svg, canvas { max-width: 100%; }
 .filters-inline { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; max-width: 100%; }
 .filters-inline input[type="search"] { flex: 1 1 160px; min-width: 0; width: auto; }
 .filters-inline select { flex: 0 1 auto; width: auto; max-width: 100%; }
+
+/* --- Proof-confirmed: shield-lock and Verified badge ----------------------------------- */
+.tier-proof-confirmed { color: var(--ok); }  /* green means proven */
+.pill.verified { color: var(--ok); background: rgba(52, 211, 153, 0.10); border-color: rgba(52, 211, 153, 0.55);
+  text-transform: none; }
+.proof-head { display: inline-flex; align-items: center; gap: 10px; }
+.shield-lock { flex: none; overflow: visible; }
+.shield-lock .shield-outline { stroke: var(--ok); stroke-dasharray: 1; stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.55)); }
+.shield-lock .lock-body { fill: var(--ok); }
+.shield-lock .lock-shackle { stroke: var(--ok); }
+.shield-lock .lock-keyhole { fill: var(--bg); }
+/* One second in all: the outline draws (0-0.5 s), the lock drops in (0.4-0.75 s),
+   the shackle snaps shut (0.75-0.9 s), then one soft glow. */
+.shield-lock.animate .shield-outline { stroke-dashoffset: 1; animation: shield-draw 0.5s ease-out forwards; }
+.shield-lock.animate .lock-body, .shield-lock.animate .lock-keyhole {
+  opacity: 0; transform-box: fill-box; transform-origin: center; animation: lock-drop 0.35s 0.4s ease-out forwards; }
+.shield-lock.animate .lock-shackle { transform-box: fill-box; transform-origin: center bottom; transform: translateY(-3px);
+  opacity: 0; animation: shackle-close 0.15s 0.75s ease-in forwards; }
+.shield-lock.animate { animation: shield-glow 0.25s 0.75s ease-out 1; }
+@keyframes shield-draw { to { stroke-dashoffset: 0; } }
+@keyframes lock-drop { from { opacity: 0; transform: translateY(-4px) scale(0.8); } to { opacity: 1; transform: none; } }
+@keyframes shackle-close { to { opacity: 1; transform: none; } }
+@keyframes shield-glow { 50% { filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.9)); } }
+@media (prefers-reduced-motion: reduce) {
+  .shield-lock.animate *, .shield-lock.animate { animation: none !important; opacity: 1 !important;
+    transform: none !important; stroke-dashoffset: 0 !important; }
+}

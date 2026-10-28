@@ -6,6 +6,7 @@ import CallGraphPanel from '../components/CallGraphPanel.jsx'
 import CountUp from '../components/CountUp.jsx'
 import SeverityViz from '../components/SeverityViz.jsx'
 import Tilt from '../components/Tilt.jsx'
+import VerifiedBadge, { isProven } from '../components/VerifiedBadge.jsx'
 
 const POLL_MS = 1000
 
@@ -139,6 +140,7 @@ function FindingCard({ f, catalog }) {
           <strong>
             {cweTitle(catalog, f.cwe)}
             {foundGroup(f) === 'kavach-only' && <span className="pill only-kavach">Only Kavach</span>}
+            {isProven(f) && <VerifiedBadge small />}
           </strong>
           <span className="mono small">{f.file}:{f.line}</span>
           <span className="muted small">{plainSummary(f)}</span>
