@@ -153,14 +153,37 @@ class Result:
 
 # --- helpers -----------------------------------------------------------------
 
+def _dynamic_import(node: ast.AST) -> str | None:
+    """Module name for `__import__("pkg.mod")` or `importlib.import_module("pkg.mod")`."""
+    if not isinstance(node, ast.Call) or not node.args:
+        return None
+    arg = node.args[0]
+    if not (isinstance(arg, ast.Constant) and isinstance(arg.value, str) and arg.value):
+        return None
+    func = node.func
+    if isinstance(func, ast.Name) and func.id == "__import__":
+        # __import__("a.b") returns the top package `a`; attributes are then looked up on it.
+        return arg.value.split(".")[0]
+    if isinstance(func, ast.Attribute) and func.attr == "import_module" \
+            and isinstance(func.value, ast.Name) and func.value.id == "importlib":
+        return arg.value
+    return None
+
+
 def dotted(node: ast.AST) -> str | None:
-    """'a.b.c' for Name/Attribute chains, 'f().attr' through calls; None if dynamic."""
+    """'a.b.c' for Name/Attribute chains, 'f().attr' through calls; None if dynamic.
+
+    Literal dynamic imports resolve to the module: `__import__("shlex").quote`
+    is 'shlex.quote', so sinks and sanitizers match however they are imported.
+    """
     parts: list[str] = []
     while isinstance(node, ast.Attribute):
         parts.append(node.attr)
         node = node.value
     if isinstance(node, ast.Name):
         parts.append(node.id)
+    elif (module := _dynamic_import(node)) is not None:
+        parts.append(module)
     elif isinstance(node, ast.Call) and (inner := dotted(node.func)):
         parts.append(f"{inner}()")
     else:
@@ -404,7 +427,8 @@ class _FunctionAnalysis:
             raw = "<dynamic>"
         callee = self.project.canonical(self.fn.module, raw)
         site = CallSite(raw, callee, node.lineno, receiver, args, kwargs, spread, via_attribute)
-        key = (node.lineno, node.col_offset)
+        # Start and end: in `get_db().execute(q)` both calls start at the same column.
+        key = (node.lineno, node.col_offset, node.end_lineno, node.end_col_offset)
         site = self.calls[key].merge(site) if key in self.calls else site
         self.calls[key] = site
 
