@@ -40,11 +40,11 @@ export const api = {
     form.append('github_url', url)
     return json('/scans', { method: 'POST', body: form })
   },
-  snippet: (code) =>
+  snippet: (code, filename = 'snippet.py') =>
     json('/snippet', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ code, filename }),
     }),
   source: (scanId, path) =>
     request(`/scans/${scanId}/source?path=${encodeURIComponent(path)}`).then((r) => r.text()),

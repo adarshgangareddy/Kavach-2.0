@@ -298,3 +298,33 @@ details.more h3 { margin-top: 18px; }
   .finding-card .finding-main { flex-basis: 100%; order: 2; }
   .finding-card .finding-side { order: 1; }
 }
+
+.fix-editor { display: grid; gap: 8px; margin: 6px 0 12px; }
+.fix-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rescan { padding: 10px 12px; border-radius: 8px; border: 1px solid currentColor; }
+.rescan.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
+.rescan.warn { color: var(--medium); background: color-mix(in srgb, var(--medium) 8%, transparent); }
+.rescan.bad { color: var(--high); background: color-mix(in srgb, var(--high) 8%, transparent); }
+.rescan a, .rescan .link { color: var(--accent); }
+
+/* Fix editor with line numbers. Gutter and textarea share font, line height and padding. */
+.code-editor {
+  display: flex; height: 340px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--code-bg); overflow: hidden;
+}
+.code-editor:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.code-editor .gutter, .code-editor textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px; line-height: 20px; padding: 10px 0; margin: 0;
+}
+.code-editor .gutter {
+  flex: none; min-width: 3.6em; overflow: hidden; text-align: right; padding-right: 10px; padding-left: 8px;
+  color: var(--muted); border-right: 1px solid var(--border); user-select: none;
+}
+.code-editor .gutter div { height: 20px; }
+.code-editor .gutter .problem { color: var(--high); font-weight: 700; background: var(--hl); }
+.code-editor textarea {
+  flex: 1; min-width: 0; height: 100%; min-height: 0; border: none; border-radius: 0; resize: none;
+  padding-left: 10px; padding-right: 10px; background: transparent; white-space: pre; overflow: auto;
+}
+.code-editor textarea:focus-visible { outline: none; }

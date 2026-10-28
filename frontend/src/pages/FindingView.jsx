@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
 import { ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary } from '../components.jsx'
@@ -84,6 +84,109 @@ function SeverityBreakdown({ finding }) {
   )
 }
 
+/** A name the snippet endpoint accepts: letters, digits, _ and -, ending in .py. */
+function snippetName(file) {
+  const base = file.split('/').pop().replace(/\.py$/, '').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 60)
+  return `${base || 'snippet'}.py`
+}
+
+const EDITOR_LINE_PX = 20  // must match .code-editor line-height in styles.css
+
+/** A textarea with a line-number gutter that scrolls with it; the problem line is marked. */
+function NumberedEditor({ value, onChange, problemLine }) {
+  const area = useRef(null)
+  const gutter = useRef(null)
+  const lines = value.split('\n').length
+
+  useEffect(() => {  // open at the problem line, a few lines of context above it
+    if (area.current) area.current.scrollTop = Math.max(0, problemLine - 5) * EDITOR_LINE_PX
+    if (gutter.current && area.current) gutter.current.scrollTop = area.current.scrollTop
+  }, [problemLine])
+
+  return (
+    <div className="code-editor">
+      <div className="gutter" ref={gutter} aria-hidden="true">
+        {Array.from({ length: lines }, (_, i) => (
+          <div key={i} className={i + 1 === problemLine ? 'problem' : ''}>{i + 1}</div>
+        ))}
+      </div>
+      <textarea id="fix-code" ref={area} rows={16} spellCheck={false} wrap="off" value={value}
+                onChange={(e) => onChange(e.target.value)}
+                onScroll={(e) => { if (gutter.current) gutter.current.scrollTop = e.target.scrollTop }} />
+    </div>
+  )
+}
+
+/** Edit the file in place and re-scan it, then say whether this kind of issue is gone. */
+function FixEditor({ finding, onFixed, saving }) {
+  const catalog = useCatalog()
+  const [code, setCode] = useState(null)
+  const [original, setOriginal] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setResult(null)
+    api.source(finding.scan_id, finding.file)
+      .then((text) => { setCode(text); setOriginal(text) })
+      .catch((e) => setError(`Could not load the file: ${e.message}`))
+  }, [finding.scan_id, finding.file])
+
+  async function rescan() {
+    setBusy(true)
+    setError('')
+    try {
+      setResult(await api.snippet(code, snippetName(finding.file)))
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (code === null) return error ? <ErrorBox error={error} /> : <Spinner label="Loading the file" />
+  const same = result?.findings.filter((f) => f.cwe === finding.cwe) ?? []
+  const serious = same.filter((f) => f.severity >= 7)
+  const kind = cweTitle(catalog, finding.cwe)
+
+  return (
+    <div className="fix-editor">
+      <label className="muted small" htmlFor="fix-code">
+        {finding.file}, editable copy (line {finding.line} is the problem)
+      </label>
+      <NumberedEditor value={code} problemLine={finding.line}
+                      onChange={(text) => { setCode(text); setResult(null) }} />
+      <div className="fix-actions">
+        <button type="button" className="primary" disabled={busy || !code.trim()} onClick={rescan}>
+          {busy ? 'Re-scanning…' : 'Re-scan my changes'}
+        </button>
+        {code !== original && (
+          <button type="button" onClick={() => { setCode(original); setResult(null) }}>Undo my edits</button>
+        )}
+      </div>
+      <ErrorBox error={error} />
+      {result && (
+        <div className={`rescan ${same.length === 0 ? 'ok' : serious.length ? 'bad' : 'warn'}`} role="status">
+          {same.length === 0 && <strong>Fixed: no {kind} issues left in this file.</strong>}
+          {same.length > 0 && serious.length === 0 && (
+            <strong>Better: {same.length} {kind} {same.length === 1 ? 'finding remains' : 'findings remain'}, none serious enough to block a commit.</strong>
+          )}
+          {serious.length > 0 && (
+            <strong>Not fixed yet: {serious.length} serious {kind} {serious.length === 1 ? 'issue' : 'issues'} still found.</strong>
+          )}
+          <span>
+            {' '}<a href={`#/scans/${result.scan.id}`}>See all {result.findings.length} results of the re-scan</a>
+            {serious.length === 0 && finding.status !== 'fixed' && (
+              <> · <button type="button" className="link" disabled={saving} onClick={onFixed}>Mark this issue fixed</button></>
+            )}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const STATUS_ACTIONS = [
   { status: 'fixed', label: 'Mark fixed' },
   { status: 'accepted', label: 'Accept the risk' },
@@ -157,8 +260,11 @@ export default function FindingView({ findingId }) {
         <h2>How to fix it</h2>
         <p className="fix">{finding.fix_suggestion}</p>
         <ol className="next-steps">
-          <li>Change the code at <span className="mono">{finding.file}:{finding.line}</span> as described above.</li>
-          <li>Check your fix: <a href="#/">scan the changed code again</a> (the <em>Paste code</em> tab is quickest).</li>
+          <li>
+            Edit the code below. The problem is on <strong>line {finding.line}</strong> of{' '}
+            <span className="mono">{finding.file}</span>.
+          </li>
+          <li>Click <strong>Re-scan my changes</strong> to check the fix.</li>
           <li>
             Update this issue:{' '}
             <span className="status-actions" role="group" aria-label="Change status">
@@ -171,7 +277,11 @@ export default function FindingView({ findingId }) {
             </span>
           </li>
         </ol>
-        <p className="muted small">Fix advice is a suggestion. Review it before applying.</p>
+        <FixEditor finding={finding} onFixed={() => changeStatus('fixed')} saving={saving} />
+        <p className="muted small">
+          Fix advice is a suggestion. Review it before applying. Edits here are only re-scanned; copy the
+          fixed code back into your own file.
+        </p>
       </section>
 
       <div className="grid two">
