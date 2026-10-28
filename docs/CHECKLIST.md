@@ -35,7 +35,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ **Sink lists:** filled in by the team in `backend/sentinel-rules.toml`; the taint detector is on
 - [x] ✅ **Argument-aware sinks:** sink tables in `sentinel-rules.toml` (`args`, `kwargs`, `when`): `execute` only counts the SQL text, `subprocess` only with `shell=True`. Removed the parameterized-query false alarm in app2
 - [ ] ⬜ **Rule layer, custom AST checks:** hard-coded secrets and weak crypto (Bandit covers these for now)
-- [x] ✅ **ML ranker:** trained on the seeded targets (`python -m app.rank.train targets`), saved as `backend/sentinel-model.json` (JSON weights, no pickle). Held out by app: false positives read before 90% recall 6 → 1 (83% fewer), precision@k 54% → 92%. Only 23 findings from 3 apps, so indicative
+- [x] ✅ **ML ranker:** trained on the seeded targets (`python -m app.rank.train targets`), saved as `backend/sentinel-model.json` (JSON weights, no pickle). Held out by app: false positives read before 90% recall 5 → 0, precision@k 62% → 100%. Only 23 findings from 3 apps: present as indicative, not as a 100% claim. Labelling now matches the closest line first
 - [x] ✅ **Priority sort:** open first, then severity band, then `ml_rank` or confidence, then tier and location (`app/rank/priority.py`); used by scans and the API
 
 ## L3 Early detection: "Catch it before it ships"
@@ -73,7 +73,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
-- [x] ✅ 176 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ 177 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [x] ✅ PR #1 and PR #2 merged into `main`

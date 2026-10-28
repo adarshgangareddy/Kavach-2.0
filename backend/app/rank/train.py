@@ -48,22 +48,25 @@ class Dataset:
 def match_truth(findings: list[dict], truth: list[dict],
                 tolerance: int = LINE_TOLERANCE) -> list[dict | None]:
     """The ground-truth bug each finding matches (same file and CWE, line within
-    tolerance), or None. Each bug is claimed by at most one finding, so duplicate
-    reports of the same bug count as false positives after the first.
+    tolerance), or None.
+
+    Closest pairs are matched first, so a finding on the exact line wins over a
+    neighbour. Each bug is claimed by at most one finding, so duplicate reports
+    of the same bug count as false positives.
     """
-    unclaimed = list(range(len(truth)))
+    pairs = []
+    for i, f in enumerate(findings):
+        for j, t in enumerate(truth):
+            if t.get("file") == f.get("file") and t.get("cwe") == f.get("cwe"):
+                distance = abs(int(t.get("line", 0)) - int(f.get("line", 0)))
+                if distance <= tolerance:
+                    pairs.append((distance, i, j))
     matches: list[dict | None] = [None] * len(findings)
-    order = sorted(range(len(findings)),
-                   key=lambda i: (findings[i].get("file", ""), findings[i].get("line", 0)))
-    for i in order:
-        f = findings[i]
-        hit = next((j for j in unclaimed
-                    if truth[j].get("file") == f.get("file") and truth[j].get("cwe") == f.get("cwe")
-                    and abs(int(truth[j].get("line", 0)) - int(f.get("line", 0))) <= tolerance),
-                   None)
-        if hit is not None:
-            unclaimed.remove(hit)
-            matches[i] = truth[hit]
+    claimed: set[int] = set()
+    for _, i, j in sorted(pairs):
+        if matches[i] is None and j not in claimed:
+            matches[i] = truth[j]
+            claimed.add(j)
     return matches
 
 

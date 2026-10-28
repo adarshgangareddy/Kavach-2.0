@@ -73,13 +73,13 @@ def test_false_positives_at_recall_and_precision():
 
 def test_label_findings_matches_file_cwe_and_nearby_line():
     findings = [
-        {"file": "a.py", "line": 10, "cwe": "CWE-78"},
-        {"file": "a.py", "line": 11, "cwe": "CWE-78"},   # duplicate report of the same bug
+        {"file": "a.py", "line": 10, "cwe": "CWE-78"},   # also in range, but further away
+        {"file": "a.py", "line": 11, "cwe": "CWE-78"},   # closest to the bug on line 12 wins
         {"file": "a.py", "line": 30, "cwe": "CWE-78"},
         {"file": "b.py", "line": 5, "cwe": "CWE-89"},
     ]
     truth = [{"file": "a.py", "line": 12, "cwe": "CWE-78"}, {"file": "b.py", "line": 5, "cwe": "CWE-22"}]
-    assert label_findings(findings, truth) == [1, 0, 0, 0]
+    assert label_findings(findings, truth) == [0, 1, 0, 0]
 
 
 # --- training (needs scikit-learn) -------------------------------------------
@@ -210,3 +210,10 @@ def test_train_from_targets_command(tmp_path, monkeypatch, capsys):
     assert [(r["project"], r["label"]) for r in rows] == [("a1", 1), ("a1", 0), ("a2", 1), ("a2", 0)]
     model = json.loads(out.read_text())
     assert model["meta"]["projects"] == 2 and "taint" in model["meta"]["metrics"]["detectors"]
+
+
+def test_closest_finding_claims_the_bug():
+    findings = [{"file": "app.py", "line": 25, "cwe": "CWE-78"},   # neighbour, reported first
+                {"file": "app.py", "line": 26, "cwe": "CWE-78"}]   # the exact line
+    truth = [{"file": "app.py", "line": 26, "cwe": "CWE-78"}]
+    assert label_findings(findings, truth) == [0, 1]
