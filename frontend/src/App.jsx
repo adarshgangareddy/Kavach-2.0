@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api, UNAUTHORIZED_EVENT } from './api.js'
 import { Spinner } from './components.jsx'
+import ReduceEffectsToggle from './components/ReduceEffectsToggle.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import ScanView from './pages/ScanView.jsx'
@@ -101,11 +102,13 @@ export default function App() {
           </svg>
           Kavach
         </a>
+        {!user && <nav className="topnav"><ReduceEffectsToggle /></nav>}
         {user && (
           <nav className="topnav">
             <a href="#/" className={route === '/' ? 'navlink active' : 'navlink'}>Scans</a>
             <a href="#/monitor" className={route === '/monitor' ? 'navlink active' : 'navlink'}>Monitoring</a>
             <DetectorBadge />
+            <ReduceEffectsToggle />
             <span className="muted small user-email" title={`Signed in as ${user.email} (${user.role})`}>
               {user.email}
             </span>

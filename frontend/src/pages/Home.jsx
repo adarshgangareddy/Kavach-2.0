@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { ConfirmDelete, ErrorBox, Spinner } from '../components.jsx'
+import HeroBackdrop from '../components/HeroBackdrop.jsx'
 
 const TABS = [
   { id: 'zip', label: 'Upload a zip' },
@@ -160,6 +161,7 @@ export default function Home() {
   return (
     <>
       <section className="hero">
+        <HeroBackdrop variant="home" />
         <h1>Find security bugs in your Flask app</h1>
         <p className="muted">
           Kavach follows user input through your code, including your own helper functions,

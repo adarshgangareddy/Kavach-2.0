@@ -54,6 +54,26 @@ depend on changed files. It runs the full suite whenever narrowing would be unsa
 when `conftest.py` or packaging changes. `tests/test_targets_regression.py` re-scans every seeded app in
 `targets/` and fails if a bug it used to catch is now missed, or if false positives go up.
 
+Dashboard tests (the 3D views' 2D fallbacks):
+
+```bash
+cd frontend && npm test
+```
+
+### 3D effects and how to turn them off
+
+The dashboard draws a few views in 3D (three.js, loaded lazily in its own file). Each has a plain 2D
+version that shows the same information, and Kavach switches to it on its own when:
+
+- you click **Reduce effects** in the header (remembered in this browser);
+- your system asks for reduced motion (macOS: Settings > Accessibility > Display > Reduce motion);
+- WebGL is not available, a 3D view throws an error, or the WebGL context is lost;
+- the frame rate stays under 40 fps for 2 seconds;
+- the screen is narrower than 768px (except the sign-in background).
+
+To clear the saved choice, run `localStorage.removeItem('kavach.reduceEffects')` in the browser console.
+The 3D code is in `frontend/src/three/`; the 2D versions and the switch are in `frontend/src/components/`.
+
 ### Evaluation
 
 ```bash
