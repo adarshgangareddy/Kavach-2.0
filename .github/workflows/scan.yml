@@ -33,7 +33,7 @@ jobs:
           SENTINEL_RULES: backend/sentinel-rules.toml
         # targets/ holds deliberately vulnerable test fixtures for our own evaluation.
         run: >
-          sentinel scan . --diff-base "origin/$BASE_REF" --exclude targets
+          sentinel scan . --diff-base "origin/$BASE_REF" --exclude targets --exclude eval/rules_corpus
           --format sarif --out sentinel.sarif --fail-on 7
 
       - name: Validate SARIF

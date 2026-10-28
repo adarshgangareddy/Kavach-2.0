@@ -19,7 +19,7 @@
           "wrapper_caught": 1,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.076,
+          "seconds": 0.071,
           "missed": [
             "helpers.py:11 CWE-22 (wrapper)",
             "helpers.py:21 CWE-89 (wrapper)"
@@ -35,7 +35,7 @@
           "wrapper_caught": 2,
           "direct_total": 2,
           "direct_caught": 1,
-          "seconds": 0.071,
+          "seconds": 0.069,
           "missed": [
             "helpers.py:12 CWE-89 (wrapper)",
             "app.py:36 CWE-22 (direct)"
@@ -51,7 +51,7 @@
           "wrapper_caught": 1,
           "direct_total": 1,
           "direct_caught": 0,
-          "seconds": 0.073,
+          "seconds": 0.07,
           "missed": [
             "helpers.py:7 CWE-22 (wrapper)",
             "helpers.py:16 CWE-89 (wrapper)",
@@ -77,7 +77,7 @@
           "wrapper_caught": 1,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.922,
+          "seconds": 1.044,
           "missed": [
             "helpers.py:11 CWE-22 (wrapper)",
             "helpers.py:21 CWE-89 (wrapper)"
@@ -93,7 +93,7 @@
           "wrapper_caught": 1,
           "direct_total": 2,
           "direct_caught": 2,
-          "seconds": 0.924,
+          "seconds": 0.888,
           "missed": [
             "helpers.py:12 CWE-89 (wrapper)",
             "helpers.py:16 CWE-78 (wrapper)"
@@ -109,7 +109,7 @@
           "wrapper_caught": 1,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.892,
+          "seconds": 0.884,
           "missed": [
             "helpers.py:7 CWE-22 (wrapper)",
             "helpers.py:16 CWE-89 (wrapper)"
@@ -122,6 +122,114 @@
     },
     {
       "name": "Kavach (taint)",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 2,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.003,
+          "missed": [],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 5,
+          "extra": 0,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 2,
+          "direct_caught": 2,
+          "seconds": 0.003,
+          "missed": [],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 2,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.002,
+          "missed": [],
+          "errors": []
+        }
+      },
+      "precision": 0.7647058823529411,
+      "recall": 1.0
+    }
+  ],
+  "ablation": [
+    {
+      "name": "Pattern rules only (Bandit)",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 2,
+          "extra": 3,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 1,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.072,
+          "missed": [
+            "helpers.py:11 CWE-22 (wrapper)",
+            "helpers.py:21 CWE-89 (wrapper)"
+          ],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 3,
+          "extra": 1,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 2,
+          "direct_total": 2,
+          "direct_caught": 1,
+          "seconds": 0.068,
+          "missed": [
+            "helpers.py:12 CWE-89 (wrapper)",
+            "app.py:36 CWE-22 (direct)"
+          ],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 1,
+          "extra": 3,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 1,
+          "direct_total": 1,
+          "direct_caught": 0,
+          "seconds": 0.07,
+          "missed": [
+            "helpers.py:7 CWE-22 (wrapper)",
+            "helpers.py:16 CWE-89 (wrapper)",
+            "app.py:36 CWE-22 (direct)"
+          ],
+          "errors": []
+        }
+      },
+      "precision": 0.46153846153846156,
+      "recall": 0.46153846153846156
+    },
+    {
+      "name": "Taint only",
       "available": true,
       "note": "",
       "apps": {
@@ -167,69 +275,57 @@
       },
       "precision": 0.7647058823529411,
       "recall": 1.0
-    }
-  ],
-  "ablation": [
+    },
     {
-      "name": "Rules only (Bandit)",
+      "name": "Pattern rules + taint",
       "available": true,
       "note": "",
       "apps": {
         "app1": {
           "truth": 4,
-          "caught": 2,
-          "extra": 3,
+          "caught": 4,
+          "extra": 4,
           "extra_blocking": 0,
           "wrapper_total": 3,
-          "wrapper_caught": 1,
+          "wrapper_caught": 3,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.072,
-          "missed": [
-            "helpers.py:11 CWE-22 (wrapper)",
-            "helpers.py:21 CWE-89 (wrapper)"
-          ],
+          "seconds": 0.071,
+          "missed": [],
           "errors": []
         },
         "app2": {
           "truth": 5,
-          "caught": 3,
+          "caught": 5,
           "extra": 1,
           "extra_blocking": 0,
           "wrapper_total": 3,
-          "wrapper_caught": 2,
+          "wrapper_caught": 3,
           "direct_total": 2,
-          "direct_caught": 1,
-          "seconds": 0.07,
-          "missed": [
-            "helpers.py:12 CWE-89 (wrapper)",
-            "app.py:36 CWE-22 (direct)"
-          ],
+          "direct_caught": 2,
+          "seconds": 0.072,
+          "missed": [],
           "errors": []
         },
         "app3": {
           "truth": 4,
-          "caught": 1,
-          "extra": 3,
+          "caught": 4,
+          "extra": 4,
           "extra_blocking": 0,
           "wrapper_total": 3,
-          "wrapper_caught": 1,
+          "wrapper_caught": 3,
           "direct_total": 1,
-          "direct_caught": 0,
-          "seconds": 0.07,
-          "missed": [
-            "helpers.py:7 CWE-22 (wrapper)",
-            "helpers.py:16 CWE-89 (wrapper)",
-            "app.py:36 CWE-22 (direct)"
-          ],
+          "direct_caught": 1,
+          "seconds": 0.072,
+          "missed": [],
           "errors": []
         }
       },
-      "precision": 0.46153846153846156,
-      "recall": 0.46153846153846156
+      "precision": 0.5909090909090909,
+      "recall": 1.0
     },
     {
-      "name": "Taint only",
+      "name": "Kavach engines (taint + rule layer)",
       "available": true,
       "note": "",
       "apps": {
@@ -242,7 +338,7 @@
           "wrapper_caught": 3,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.002,
+          "seconds": 0.003,
           "missed": [],
           "errors": []
         },
@@ -255,7 +351,7 @@
           "wrapper_caught": 3,
           "direct_total": 2,
           "direct_caught": 2,
-          "seconds": 0.002,
+          "seconds": 0.003,
           "missed": [],
           "errors": []
         },
@@ -268,7 +364,7 @@
           "wrapper_caught": 3,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.002,
+          "seconds": 0.003,
           "missed": [],
           "errors": []
         }
@@ -277,7 +373,7 @@
       "recall": 1.0
     },
     {
-      "name": "Rules + taint",
+      "name": "Full Kavach (taint + rule layer + Bandit + Semgrep)",
       "available": true,
       "note": "",
       "apps": {
@@ -290,20 +386,20 @@
           "wrapper_caught": 3,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.075,
+          "seconds": 0.941,
           "missed": [],
           "errors": []
         },
         "app2": {
           "truth": 5,
           "caught": 5,
-          "extra": 1,
+          "extra": 2,
           "extra_blocking": 0,
           "wrapper_total": 3,
           "wrapper_caught": 3,
           "direct_total": 2,
           "direct_caught": 2,
-          "seconds": 0.073,
+          "seconds": 0.946,
           "missed": [],
           "errors": []
         },
@@ -316,26 +412,383 @@
           "wrapper_caught": 3,
           "direct_total": 1,
           "direct_caught": 1,
-          "seconds": 0.074,
+          "seconds": 0.951,
           "missed": [],
           "errors": []
         }
       },
-      "precision": 0.5909090909090909,
+      "precision": 0.5652173913043478,
       "recall": 1.0
     }
   ],
+  "patches": [
+    {
+      "app": "app1",
+      "bug": "helpers.py:7 CWE-78",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Run the program with an argument list, without a shell",
+      "reason": "",
+      "confirmed": true,
+      "left": 1,
+      "left_serious": 0,
+      "left_max_severity": 6.9,
+      "left_by": [
+        "bandit"
+      ]
+    },
+    {
+      "app": "app1",
+      "bug": "helpers.py:11 CWE-22",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Check the path stays inside the allowed folder",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    },
+    {
+      "app": "app1",
+      "bug": "helpers.py:21 CWE-89",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Use a parameterised query",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    },
+    {
+      "app": "app1",
+      "bug": "app.py:30 CWE-78",
+      "kind": "direct",
+      "patched": true,
+      "title": "Run the program with an argument list, without a shell",
+      "reason": "",
+      "confirmed": true,
+      "left": 1,
+      "left_serious": 0,
+      "left_max_severity": 6.9,
+      "left_by": [
+        "bandit"
+      ]
+    },
+    {
+      "app": "app2",
+      "bug": "helpers.py:7 CWE-78",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Run the program with an argument list, without a shell",
+      "reason": "",
+      "confirmed": true,
+      "left": 1,
+      "left_serious": 0,
+      "left_max_severity": 6.9,
+      "left_by": [
+        "bandit"
+      ]
+    },
+    {
+      "app": "app2",
+      "bug": "helpers.py:12 CWE-89",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Use a parameterised query",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    },
+    {
+      "app": "app2",
+      "bug": "app.py:26 CWE-78",
+      "kind": "direct",
+      "patched": true,
+      "title": "Run the program with an argument list, without a shell",
+      "reason": "",
+      "confirmed": true,
+      "left": 2,
+      "left_serious": 0,
+      "left_max_severity": 6.9,
+      "left_by": [
+        "bandit"
+      ]
+    },
+    {
+      "app": "app2",
+      "bug": "helpers.py:16 CWE-78",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Run the program with an argument list, without a shell",
+      "reason": "",
+      "confirmed": true,
+      "left": 1,
+      "left_serious": 0,
+      "left_max_severity": 6.9,
+      "left_by": [
+        "bandit"
+      ]
+    },
+    {
+      "app": "app2",
+      "bug": "app.py:36 CWE-22",
+      "kind": "direct",
+      "patched": true,
+      "title": "Check the path stays inside the allowed folder",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    },
+    {
+      "app": "app3",
+      "bug": "helpers.py:7 CWE-22",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Check the path stays inside the allowed folder",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    },
+    {
+      "app": "app3",
+      "bug": "helpers.py:11 CWE-78",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Run the program with an argument list, without a shell",
+      "reason": "",
+      "confirmed": true,
+      "left": 1,
+      "left_serious": 0,
+      "left_max_severity": 6.9,
+      "left_by": [
+        "bandit"
+      ]
+    },
+    {
+      "app": "app3",
+      "bug": "helpers.py:16 CWE-89",
+      "kind": "wrapper",
+      "patched": true,
+      "title": "Use a parameterised query",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    },
+    {
+      "app": "app3",
+      "bug": "app.py:36 CWE-22",
+      "kind": "direct",
+      "patched": true,
+      "title": "Check the path stays inside the allowed folder",
+      "reason": "",
+      "confirmed": true,
+      "left": 0,
+      "left_serious": 0,
+      "left_max_severity": 0.0,
+      "left_by": []
+    }
+  ],
+  "rule_layer": [
+    {
+      "name": "Kavach rule layer",
+      "available": true,
+      "note": "",
+      "expected": 36,
+      "caught": 36,
+      "decoys": 25,
+      "decoys_flagged": 0,
+      "extra": 0,
+      "seconds": 0.002,
+      "by_cwe": {
+        "CWE-327": [
+          9,
+          9
+        ],
+        "CWE-916": [
+          1,
+          1
+        ],
+        "CWE-326": [
+          2,
+          2
+        ],
+        "CWE-295": [
+          4,
+          4
+        ],
+        "CWE-330": [
+          2,
+          2
+        ],
+        "CWE-798": [
+          18,
+          18
+        ]
+      },
+      "missed": [],
+      "own_code_reports": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    {
+      "name": "Bandit",
+      "available": true,
+      "note": "",
+      "expected": 36,
+      "caught": 21,
+      "decoys": 25,
+      "decoys_flagged": 10,
+      "extra": 12,
+      "seconds": 0.074,
+      "by_cwe": {
+        "CWE-327": [
+          7,
+          9
+        ],
+        "CWE-916": [
+          0,
+          1
+        ],
+        "CWE-326": [
+          2,
+          2
+        ],
+        "CWE-295": [
+          2,
+          4
+        ],
+        "CWE-330": [
+          2,
+          2
+        ],
+        "CWE-798": [
+          8,
+          18
+        ]
+      },
+      "missed": [
+        "crypto_cases.py:17 CWE-916",
+        "crypto_cases.py:20 CWE-327",
+        "crypto_cases.py:27 CWE-295",
+        "crypto_cases.py:28 CWE-295",
+        "crypto_cases.py:29 CWE-327",
+        "secrets_cases.py:16 CWE-798",
+        "secrets_cases.py:20 CWE-798",
+        "secrets_cases.py:21 CWE-798",
+        "secrets_cases.py:22 CWE-798",
+        "secrets_cases.py:23 CWE-798",
+        "secrets_cases.py:24 CWE-798",
+        "secrets_cases.py:25 CWE-798",
+        "secrets_cases.py:26 CWE-798",
+        "secrets_cases.py:27 CWE-798",
+        "secrets_cases.py:28 CWE-798"
+      ],
+      "own_code_reports": 3,
+      "precision": 0.6363636363636364,
+      "recall": 0.5833333333333334
+    },
+    {
+      "name": "Semgrep (p/python rules)",
+      "available": true,
+      "note": "",
+      "expected": 36,
+      "caught": 9,
+      "decoys": 25,
+      "decoys_flagged": 0,
+      "extra": 1,
+      "seconds": 0.911,
+      "by_cwe": {
+        "CWE-327": [
+          6,
+          9
+        ],
+        "CWE-916": [
+          0,
+          1
+        ],
+        "CWE-326": [
+          2,
+          2
+        ],
+        "CWE-295": [
+          1,
+          4
+        ],
+        "CWE-330": [
+          0,
+          2
+        ],
+        "CWE-798": [
+          0,
+          18
+        ]
+      },
+      "missed": [
+        "crypto_cases.py:17 CWE-916",
+        "crypto_cases.py:20 CWE-327",
+        "crypto_cases.py:21 CWE-327",
+        "crypto_cases.py:25 CWE-295",
+        "crypto_cases.py:27 CWE-295",
+        "crypto_cases.py:28 CWE-295",
+        "crypto_cases.py:29 CWE-327",
+        "crypto_cases.py:34 CWE-330",
+        "crypto_cases.py:35 CWE-330",
+        "secrets_cases.py:13 CWE-798",
+        "secrets_cases.py:14 CWE-798",
+        "secrets_cases.py:15 CWE-798",
+        "secrets_cases.py:16 CWE-798",
+        "secrets_cases.py:17 CWE-798",
+        "secrets_cases.py:18 CWE-798",
+        "secrets_cases.py:19 CWE-798",
+        "secrets_cases.py:20 CWE-798",
+        "secrets_cases.py:21 CWE-798",
+        "secrets_cases.py:22 CWE-798",
+        "secrets_cases.py:23 CWE-798",
+        "secrets_cases.py:24 CWE-798",
+        "secrets_cases.py:25 CWE-798",
+        "secrets_cases.py:26 CWE-798",
+        "secrets_cases.py:27 CWE-798",
+        "secrets_cases.py:28 CWE-798",
+        "secrets_cases.py:31 CWE-798",
+        "secrets_cases.py:32 CWE-798"
+      ],
+      "own_code_reports": 0,
+      "precision": 0.9,
+      "recall": 0.25
+    }
+  ],
+  "rule_layer_patches": {
+    "cases": 36,
+    "patched": 28,
+    "confirmed": 28
+  },
   "early_detection": [
     {
       "app": "app1",
       "blocked": true,
-      "seconds": 0.033,
+      "seconds": 0.031,
       "blocking_findings": 4
     },
     {
       "app": "app2",
       "blocked": true,
-      "seconds": 0.034,
+      "seconds": 0.031,
       "blocking_findings": 5
     },
     {

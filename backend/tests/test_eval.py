@@ -97,7 +97,7 @@ def test_early_detection_blocks_the_route_commit(evalmod, targets):
 
 def test_report_and_cli(evalmod, targets, tmp_path, capsys):
     out = tmp_path / "results.md"
-    assert evalmod.main(["--targets", str(targets), "--out", str(out)]) == 0
+    assert evalmod.main(["--targets", str(targets), "--out", str(out), "--no-corpus"]) == 0
     report = out.read_text()
     assert "## Head-to-head" in report and "Kavach (taint)" in report
     assert "| Kavach (taint) | 2/2 | 100% | 1/1 | 1/1 | 1 |" in report
@@ -109,3 +109,55 @@ def test_report_and_cli(evalmod, targets, tmp_path, capsys):
 
 def test_no_targets_is_an_error(evalmod, tmp_path, capsys):
     assert evalmod.main(["--targets", str(tmp_path / "none"), "--out", str(tmp_path / "r.md")]) == 1
+
+
+# ablation, patch re-test and the secrets / weak-crypto cases ------------------------
+
+def test_ablation_ends_with_the_full_kavach_setup(evalmod):
+    names = [name for name, _ in evalmod.ablation_tools()]
+    assert names[0] == "Pattern rules only (Bandit)" and names[-1].startswith("Full Kavach")
+    assert {d.name for d in evalmod.ablation_tools()[-1][1]} == {"taint", "rules", "bandit", "semgrep"}
+
+
+def test_corpus_labels_come_from_comments(evalmod):
+    expected, decoys = evalmod.corpus_labels(evalmod.CORPUS)
+    assert len(expected) == 36 and len(decoys) == 25
+    assert {e["cwe"] for e in expected} <= set(evalmod.RULE_CWES)
+
+
+def test_rule_layer_catches_every_labelled_case_and_no_decoy(evalmod):
+    from app.detect.rules import RulesDetector
+    score = evalmod.score_corpus("rules", [RulesDetector()])
+    assert (score.caught, score.expected, score.decoys_flagged, score.extra) == (36, 36, 0, 0), score.missed
+    assert score.own_code_reports == 0  # Kavach's own code has no secrets or weak crypto
+
+
+def test_rule_findings_count_bandit_numbering_as_the_same_problem(evalmod):
+    found = [{"cwe": "CWE-259", "line": 1}, {"cwe": "CWE-328", "line": 2}, {"cwe": "CWE-78", "line": 3}]
+    assert [f["cwe"] for f in evalmod._rule_findings(found)] == ["CWE-798", "CWE-327"]
+
+
+def test_patch_eval_patches_rescans_and_finds_nothing_serious(evalmod, monkeypatch):
+    from app.detect.rules import RulesDetector
+    monkeypatch.setattr(evalmod, "full_suite", lambda: [TaintDetector(), RulesDetector()])
+    monkeypatch.setenv("SENTINEL_RULES", str(REPO / "backend" / "sentinel-rules.toml"))
+    rows = evalmod.patch_eval([REPO / "targets" / "app1"])
+    assert len(rows) == 4 and all(r["patched"] and r["confirmed"] for r in rows)
+    assert sum(r["left_serious"] for r in rows) == 0
+
+
+def test_report_has_patch_and_rule_layer_sections(evalmod, targets):
+    from app.detect.rules import RulesDetector
+    apps = evalmod.target_apps(targets)
+    tools = evalmod.evaluate(apps, [("taint", [TaintDetector()])])
+    rows = [{"app": "app1", "bug": "a.py:3 CWE-89", "kind": "direct", "patched": True, "confirmed": True,
+             "title": "Use a parameterised query", "reason": "", "left": 0, "left_serious": 0,
+             "left_max_severity": 0.0, "left_by": []},
+            {"app": "app1", "bug": "b.py:9 CWE-78", "kind": "direct", "patched": False, "confirmed": False,
+             "title": "", "reason": "uses the shell feature '|'"}]
+    corpus = [evalmod.score_corpus("Kavach rule layer", [RulesDetector()])]
+    report = evalmod.render(apps, tools, tools, [], rows, corpus)
+    assert "Patches written: 1/2. Confirmed fixed by the re-trace: 1/2." in report
+    assert "| app1/b.py:9 CWE-78 | none: uses the shell feature '|' | | |" in report
+    assert "| Kavach rule layer | 36/36 | 100% | 0/25 | 0 | 100% | 0 |" in report
+    assert "| Hard-coded credentials (CWE-798) | 18 | 18/18 |" in report

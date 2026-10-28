@@ -49,7 +49,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 ## L4 Verification and mitigation: "Prove it, then fix it"
 
 - [x] ✅ **Confidence tiers:** `pattern-match` and `reachable` assigned; findings never dropped
-- [x] ✅ **Patch suggester:** code diffs for CWE-89 (placeholders + parameters; +, f-string, %, .format, query in a variable; sqlite3 `?` / psycopg `%s`), CWE-78 (argument list, no shell; os.system → subprocess.run; refuses shell features and user-chosen programs) and CWE-22 (`_kavach_safe_path` helper, registered as a sanitizer). Each patch is re-checked by tracing the whole project in memory; dashboard shows the diff with Apply / Copy / Download .diff (`git apply`). All 13 seeded bugs get a patch confirmed fixed
+- [x] ✅ **Patch suggester:** code diffs for CWE-89 (placeholders + parameters; +, f-string, %, .format, query in a variable; sqlite3 `?` / psycopg `%s`), CWE-78 (argument list, no shell; os.system → subprocess.run; refuses shell features and user-chosen programs) and CWE-22 (`_kavach_safe_path` helper, registered as a sanitizer). Each patch is re-checked by tracing the whole project in memory; dashboard shows the diff with Apply / Copy / Download .diff (`git apply`). All 13 seeded bugs get a patch confirmed fixed. Rule-layer findings get patches too (`app/fix/rule_patches.py`): secrets → `os.environ[...]`, MD5/SHA-1 → SHA-256, certificate checks back on, `random` → `secrets`, 1024 → 3072-bit keys, old TLS → `PROTOCOL_TLS_CLIENT`; 28/36 benchmark cases, all confirmed; cipher swaps, slow password hashes and hard-coded password checks stay advice-only with the reason shown. Patches are written only when Kavach's own rule layer also reports the line, so other tools' false alarms are not 'fixed'. Import-only lines explain there is nothing to rewrite. The editor's re-scan judges the patched lines and counts other issues in the file separately
 - [ ] 👥 **Proof runner:** harmless marker test in Docker with no network, against the team's own targets
 - [ ] ⬜ **Patch re-test:** apply the suggested fix to a copy and re-run the proof (depends on the proof runner)
 
@@ -65,7 +65,9 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 
 - [x] ✅ **Seeded target apps:** app1, app2, app3 in `targets/`: 13 seeded bugs (9 wrapper, 4 direct) and safe decoys. First result: taint 13/13, Bandit 6/13. Spec in `targets/README.md`
 - [x] ✅ **Head-to-head (`eval/run.py`):** writes `eval/results.md`. Taint 13/13 (precision 76%), Semgrep `p/python` 7/13 (70%), Bandit 6/13 (46%). On wrapper bugs: taint 9/9, Bandit 4/9, Semgrep 3/9
-- [ ] 🟡 **Ablation:** rules only, taint only, rules + taint and taint + ML measured; proof row stated honestly (proof runner not built)
+- [x] ✅ **Ablation (`eval/run.py`):** Bandit only 6/13, taint only 13/13 (76%), Bandit + taint 13/13 (59%), Kavach engines (taint + rule layer) 13/13 (76%, rule layer adds no noise), full Kavach 13/13 (57%), 0 extra findings at severity ≥ 7 in any setup; ML ranker held-out FP 5 → 0; proof runner row stated honestly (not built)
+- [x] ✅ **Patch re-test (static):** every seeded bug patched (13/13), confirmed by re-trace (13/13), patched copy re-scanned by all four detectors: 0 serious reports left
+- [x] ✅ **Rule-layer benchmark (`eval/rules_corpus/`):** 36 labelled problems + 25 decoys. Kavach rule layer 36/36, 0 decoys flagged, 0 reports on our own code; Bandit 21/36, 10 decoys flagged, 2 false alarms on our own code; Semgrep 9/36
 - [x] ✅ **Early-detection numbers:** 3/3 vulnerable commits blocked by the real hook, median 0.03 s
 
 ## Engineering and delivery

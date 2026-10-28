@@ -22,7 +22,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - CLI: sentinel scan PATH [--diff-base REF] [--format text|json|sarif]
 - Hook: scripts/install-hook.sh
 - Watch: sentinel watch [--scan] [--once]  (writes .git/sentinel-status.json)
-- Eval: backend/.venv/bin/python eval/run.py  (writes eval/results.md and results.json)
+- Eval: backend/.venv/bin/python eval/run.py [--no-early] [--no-patches] [--no-corpus]  (writes eval/results.md and results.json; secrets/crypto cases in eval/rules_corpus/ use `# expect CWE-n` / `# decoy` comments)
 - Semgrep: install with `uv tool install semgrep`, never into backend/.venv (it breaks FastAPI's opentelemetry pin)
 
 ## Where things live
@@ -35,6 +35,6 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - Auth: backend/app/auth.py (Argon2id, JWT cookie), get_current_user in main.py, users + owner scoping in store.py; secrets in backend/.env (see .env.example)
 - Encryption at rest: backend/app/vault.py (AES-256-GCM workspaces; key from SENTINEL_DATA_KEY or .sentinel-data/vault.key)
 - L5 reporting: backend/app/report/ (severity, owasp, sarif, export), backend/app/main.py
-- Patch suggester: backend/app/fix/patch.py (ast rewrite of the sink call), verify.py (re-trace in memory), GET /findings/{id}/patch in main.py, SuggestedPatch in frontend/src/pages/FindingView.jsx
+- Patch suggester: backend/app/fix/patch.py (ast rewrite of the sink call), rule_patches.py (secrets/crypto), verify.py (re-trace in memory), GET /findings/{id}/patch in main.py, SuggestedPatch in frontend/src/pages/FindingView.jsx
 - Runtime alerts: telemetry/kavach_telemetry.py (client for Flask apps), /apps + /alerts in main.py, monitored_apps + alerts in store.py, frontend/src/pages/Monitor.jsx
 - Dashboard: frontend/src/
