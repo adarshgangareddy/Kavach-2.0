@@ -44,9 +44,52 @@ MAX_LOOP_ITER = 10
 _EMPTY: frozenset[Label] = frozenset()
 
 
+_UNKNOWN = object()  # a keyword argument whose value is not a literal
+
+
+@dataclass(frozen=True)
+class SinkSpec:
+    """A sink call pattern, optionally narrowed to the arguments that matter.
+
+    args/kwargs: which positional indexes and keyword names carry the dangerous
+    value. None means every argument and the receiver (a plain string sink).
+    when: keyword values the call must have to be dangerous, e.g. shell=True.
+    A non-literal value, or a **kwargs spread, counts as possibly matching.
+    """
+    pattern: str
+    args: tuple[int, ...] | None = None
+    kwargs: tuple[str, ...] = ()
+    when: tuple[tuple[str, object], ...] = ()
+
+    def applies(self, site: CallSite) -> bool:
+        for name, wanted in self.when:
+            if name in site.consts:
+                value = site.consts[name]
+                if value is not _UNKNOWN and value != wanted:
+                    return False
+            elif not site.spread:
+                return False
+        return True
+
+    def labels(self, site: CallSite) -> frozenset[Label]:
+        if self.args is None:
+            return site.labels()
+        out = set(site.spread)  # *args/**kwargs may fill a dangerous slot
+        for i in self.args:
+            if i < len(site.args):
+                out |= site.args[i]
+        for name in self.kwargs:
+            out |= site.kwargs.get(name, _EMPTY)
+        return frozenset(out)
+
+
+def _spec(sink: str | SinkSpec) -> SinkSpec:
+    return sink if isinstance(sink, SinkSpec) else SinkSpec(sink)
+
+
 @dataclass(frozen=True)
 class Config:
-    sinks: tuple[str, ...]
+    sinks: tuple[str | SinkSpec, ...]
     sources: tuple[str, ...] = ()
     sanitizers: tuple[str, ...] = ()
     entry_decorators: tuple[str, ...] = ()
@@ -98,6 +141,7 @@ class CallSite:
     spread: frozenset[Label]
     via_attribute: bool
     target: str | None = None
+    consts: dict[str, object] = field(default_factory=dict)  # literal keyword values
 
     def labels(self) -> frozenset[Label]:
         out = set(self.receiver) | self.spread
@@ -113,6 +157,9 @@ class CallSite:
             self.kwargs[k] = self.kwargs.get(k, _EMPTY) | v
         self.receiver |= other.receiver
         self.spread |= other.spread
+        for k in self.consts.keys() | other.consts.keys():
+            mine, theirs = self.consts.get(k, _UNKNOWN), other.consts.get(k, _UNKNOWN)
+            self.consts[k] = mine if mine is theirs or mine == theirs else _UNKNOWN
         return self
 
 
@@ -412,12 +459,14 @@ class _FunctionAnalysis:
             else:
                 args.append(self._expr(arg, env))
         kwargs: dict[str, frozenset[Label]] = {}
+        consts: dict[str, object] = {}
         for kw in node.keywords:
             labels = self._expr(kw.value, env)
             if kw.arg is None:
                 spread |= labels
             else:
                 kwargs[kw.arg] = labels
+                consts[kw.arg] = kw.value.value if isinstance(kw.value, ast.Constant) else _UNKNOWN
 
         via_attribute = isinstance(node.func, ast.Attribute)
         receiver = self._expr(node.func.value, env) if via_attribute else _EMPTY
@@ -427,7 +476,8 @@ class _FunctionAnalysis:
             self.unresolved[node.lineno] = ast.unparse(node.func)[:80]
             raw = "<dynamic>"
         callee = self.project.canonical(self.fn.module, raw)
-        site = CallSite(raw, callee, node.lineno, receiver, args, kwargs, spread, via_attribute)
+        site = CallSite(raw, callee, node.lineno, receiver, args, kwargs, spread, via_attribute,
+                        consts=consts)
         # Start and end: in `get_db().execute(q)` both calls start at the same column.
         key = (node.lineno, node.col_offset, node.end_lineno, node.end_col_offset)
         site = self.calls[key].merge(site) if key in self.calls else site
@@ -597,11 +647,14 @@ class Project:
                 return True
             return False
 
+        specs = [_spec(s) for s in config.sinks]
         for fn in self.functions.values():
             for site in self.summaries[fn.key].calls:
-                if _matches(config.sinks, site.callee, site.raw):
+                for spec in specs:
+                    if not _matches((spec.pattern,), site.callee, site.raw) or not spec.applies(site):
+                        continue
                     hit = Hit(site.callee, fn.file, site.line, (fn.display, site.callee))
-                    for label in site.labels():
+                    for label in spec.labels(site):
                         offer(fn.key, label, hit)
 
         for _ in range(MAX_ROUNDS):

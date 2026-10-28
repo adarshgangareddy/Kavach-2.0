@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.detect.base import Candidate
-from app.detect.propagation import Config, Flow, Project
+from app.detect.propagation import Config, Flow, Project, SinkSpec
 from app.schema import ConfidenceTier
 
 DEFAULT_RULES = Path(__file__).resolve().parents[2] / "sentinel-rules.toml"
@@ -26,7 +26,7 @@ class RulesError(ValueError):
 class Rule:
     id: str
     cwe: str
-    sinks: tuple[str, ...]
+    sinks: tuple[str | SinkSpec, ...]
     sanitizers: tuple[str, ...]
 
 
@@ -48,6 +48,46 @@ def _strings(table: dict, key: str, where: str) -> tuple[str, ...]:
     return tuple(value)
 
 
+_SINK_KEYS = {"call", "args", "kwargs", "when"}
+
+
+def _sink(value, where: str) -> str | SinkSpec:
+    """A sink is a call pattern string, or a table narrowing which arguments count:
+    { call = "*.execute", args = [0], kwargs = ["sql"], when = { shell = true } }
+    """
+    if isinstance(value, str) and value:
+        return value
+    if not isinstance(value, dict):
+        raise RulesError(f"{where}: each sink must be a string or a table")
+    if unknown := set(value) - _SINK_KEYS:
+        raise RulesError(f"{where}: unknown sink keys {sorted(unknown)}")
+    call = value.get("call")
+    if not isinstance(call, str) or not call:
+        raise RulesError(f"{where}: a sink table needs 'call'")
+    args = value.get("args")
+    if args is not None and (not isinstance(args, list) or not all(
+            isinstance(i, int) and not isinstance(i, bool) and i >= 0 for i in args)):
+        raise RulesError(f"{where}: sink 'args' must be a list of argument positions (0, 1, ...)")
+    kwargs = value.get("kwargs", [])
+    if not isinstance(kwargs, list) or not all(isinstance(k, str) and k for k in kwargs):
+        raise RulesError(f"{where}: sink 'kwargs' must be a list of keyword names")
+    when = value.get("when", {})
+    if not isinstance(when, dict) or not all(
+            isinstance(v, (str, int, float, bool)) for v in when.values()):
+        raise RulesError(f"{where}: sink 'when' must map keyword names to literal values")
+    if args is None and kwargs:
+        args = []  # naming keywords means "only these", not "everything"
+    return SinkSpec(call, tuple(args) if args is not None else None, tuple(kwargs),
+                    tuple(sorted(when.items())))
+
+
+def _sinks(table: dict, where: str) -> tuple[str | SinkSpec, ...]:
+    value = table.get("sinks", [])
+    if not isinstance(value, list):
+        raise RulesError(f"{where}: 'sinks' must be a list")
+    return tuple(_sink(v, f"{where} sink #{n + 1}") for n, v in enumerate(value))
+
+
 def load_rules(path: Path) -> Rules:
     try:
         raw = path.read_bytes()
@@ -62,7 +102,7 @@ def load_rules(path: Path) -> Rules:
         where = f"{path.name} rule #{i + 1}"
         if not isinstance(table.get("id"), str) or not str(table.get("cwe", "")).startswith("CWE-"):
             raise RulesError(f"{where}: needs 'id' and a 'cwe' like \"CWE-78\"")
-        rules.append(Rule(table["id"], table["cwe"], _strings(table, "sinks", where),
+        rules.append(Rule(table["id"], table["cwe"], _sinks(table, where),
                           _strings(table, "sanitizers", where)))
     return Rules(tuple(rules), _strings(data, "sources", path.name),
                  _strings(data, "entry_decorators", path.name),

@@ -276,3 +276,51 @@ def test_one_input_reaching_several_sinks_reports_each():
     """})
     flows = [(f.line, f.path) for f in result.flows if f.entry == "entry"]
     assert flows == [(3, ("entry()", "helper()", "store")), (6, ("entry()", "store"))]
+
+
+def test_argument_aware_sinks():
+    from app.detect.propagation import SinkSpec
+    config = Config(sinks=(
+        SinkSpec("*.query", args=(0,), kwargs=("sql",)),
+        SinkSpec("runner.go", args=(0,), when=(("shell", True),)),
+    ))
+    result = run({"m.py": """
+        import runner
+
+        def built(q, db):
+            db.query("SELECT " + q)
+
+        def parameterized(q, db):
+            db.query("SELECT ?", (q,))
+
+        def by_keyword(q, db):
+            db.query(sql=q)
+
+        def tainted_receiver(q):
+            connect(q).query("SELECT 1")
+
+        def with_shell(q):
+            runner.go(q, shell=True)
+
+        def no_shell(q):
+            runner.go(q)
+
+        def shell_false(q):
+            runner.go(q, shell=False)
+
+        def shell_unknown(q, flag):
+            runner.go(q, shell=flag)
+
+        def spread(q, opts):
+            runner.go(q, **opts)
+    """}, config)
+    assert {f.entry for f in result.flows} == {
+        "built", "by_keyword", "with_shell", "shell_unknown", "spread"}
+
+
+def test_plain_string_sinks_still_match_any_argument():
+    result = run({"m.py": """
+        def entry(q, db):
+            db.store("fixed", q)
+    """}, Config(sinks=("*.store",)))
+    assert {f.origin for f in result.flows} == {"param:q", "param:db"}  # receiver counts too

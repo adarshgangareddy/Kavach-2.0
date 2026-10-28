@@ -33,7 +33,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ **Wrapper discovery:** finds project functions whose parameter reaches a sink
 - [x] ✅ **Rule layer, baseline:** Bandit and Semgrep adapters
 - [x] ✅ **Sink lists:** filled in by the team in `backend/sentinel-rules.toml`; the taint detector is on
-- [ ] ⬜ **Argument-aware sinks:** only flag `execute`'s SQL argument and `subprocess` calls with `shell=True` (both are flagged on any tainted argument today, which causes false positives)
+- [x] ✅ **Argument-aware sinks:** sink tables in `sentinel-rules.toml` (`args`, `kwargs`, `when`): `execute` only counts the SQL text, `subprocess` only with `shell=True`. Removed the parameterized-query false alarm in app2
 - [ ] ⬜ **Rule layer, custom AST checks:** hard-coded secrets and weak crypto (Bandit covers these for now)
 - [ ] 🟡 **ML ranker:** built (`app/rank/`): features, project-level cross-validation, false-positive-reduction report, model saved as JSON weights (no pickle), scans score without scikit-learn. **Needs real labelled findings from the seeded targets to train**; until a model file exists, `ml_rank` is the detector confidence
 - [x] ✅ **Priority sort:** open first, then severity band, then `ml_rank` or confidence, then tier and location (`app/rank/priority.py`); used by scans and the API
@@ -72,7 +72,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
-- [x] ✅ 149 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ 158 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [ ] ⬜ PR #1 reviewed and merged into `main`
@@ -88,8 +88,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 
 ## Suggested next steps
 
-1. ⬜ Argument-aware sinks, to cut false positives on parameterized queries and safe subprocess calls.
-2. 👥 Write the seeded target apps and ground-truth JSON in `targets/`.
-3. ⬜ Build `eval/run.py` for the head-to-head results table.
-4. 👥 Train the ML ranker on labelled findings from the seeded targets (`python -m app.rank.train label`, then `fit`).
-5. ⬜ Custom AST checks for secrets and weak crypto.
+1. ⬜ Build `eval/run.py` for the head-to-head results table across `targets/`.
+2. ⬜ Train the ML ranker on the three seeded apps (`python -m app.rank.train label`, then `fit`). The data is tiny, so present it as illustrative.
+3. 👥 Proof runner for 2–3 findings (Docker, no network), then patch re-test.
+4. ⬜ Custom AST checks for secrets and weak crypto.

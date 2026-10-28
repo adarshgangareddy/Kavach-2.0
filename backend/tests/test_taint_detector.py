@@ -222,3 +222,30 @@ def test_pr_scan_follows_new_route_into_unchanged_helper(repo, tmp_path):
     assert code == 1
     [result] = json.loads(out.read_text())["runs"][0]["results"]
     assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "web/helpers.py"
+
+
+def test_sink_tables_in_rules(tmp_path):
+    from app.detect.propagation import SinkSpec
+    path = tmp_path / "r.toml"
+    path.write_text("""
+[[rule]]
+id = "x"
+cwe = "CWE-89"
+sinks = ["plain", { call = "*.query", args = [0], kwargs = ["sql"] },
+         { call = "run", args = [0], when = { shell = true } }, { call = "kw", kwargs = ["cmd"] }]
+""")
+    sinks = load_rules(path).rules[0].sinks
+    assert sinks[0] == "plain"
+    assert sinks[1] == SinkSpec("*.query", (0,), ("sql",))
+    assert sinks[2] == SinkSpec("run", (0,), (), (("shell", True),))
+    assert sinks[3] == SinkSpec("kw", (), ("cmd",))
+
+
+@pytest.mark.parametrize("sink", ['{ args = [0] }', '{ call = "x", args = [-1] }',
+                                  '{ call = "x", args = "0" }', '{ call = "x", when = 1 }',
+                                  '{ call = "x", extra = 1 }', '3'])
+def test_invalid_sink_tables_are_rejected(tmp_path, sink):
+    path = tmp_path / "r.toml"
+    path.write_text(f'[[rule]]\nid = "x"\ncwe = "CWE-78"\nsinks = [{sink}]\n')
+    with pytest.raises(RulesError):
+        load_rules(path)

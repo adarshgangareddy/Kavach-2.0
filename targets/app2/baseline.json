@@ -9,6 +9,6 @@
     "helpers.py:7:CWE-78"
   ],
   "missed": [],
-  "false_positives": 1,
-  "findings": 6
+  "false_positives": 0,
+  "findings": 5
 }
