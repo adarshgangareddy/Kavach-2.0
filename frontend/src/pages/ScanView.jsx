@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, severityLabel, SEVERITY_ORDER, STATUSES } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
 import { BarChart, ConfirmDelete, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary, severityRows } from '../components.jsx'
+import CallGraphPanel from '../components/CallGraphPanel.jsx'
 
 const POLL_MS = 1000
 
@@ -222,6 +223,8 @@ export default function ScanView({ scanId }) {
           )
         )}
       </section>
+
+      <CallGraphPanel scan={scan} findings={findings} />
 
       {findings && findings.length > 0 && (
         <section className="card">

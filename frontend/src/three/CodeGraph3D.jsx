@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { useEffects } from '../components/effects.jsx'
 import { makeGraph } from './graphData.js'
 import { useFpsGuard } from './useFpsGuard.js'
+import WakeOnChange from './WakeOnChange.jsx'
 
 const CYAN = '#22D3EE'
 const RED = '#F43F5E'
@@ -137,6 +138,7 @@ export default function CodeGraph3D({ distance = 7.5 }) {
                 gl.domElement.addEventListener('webglcontextlost', onLost)
                 lost.current = () => gl.domElement.removeEventListener('webglcontextlost', onLost)
               }}>
+        <WakeOnChange value={visible} />
         <Graph graph={graph} onSlow={() => disable3D('slow')} />
       </Canvas>
     </div>
