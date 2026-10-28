@@ -15,8 +15,8 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 | L3 Early detection | Must (fix-watcher: Stretch) | 3 / 4 | ✅ Must-haves complete |
 | L4 Verification and mitigation | Should | 1 / 4 | 🟡 Confidence tiers only |
 | L5 Reporting and dashboard | Must | 5 / 5 | ✅ Complete |
-| Evaluation | Must for demo | 0 / 4 | ⬜ Not started |
-| **Total** | | **18 / 28** | **About 64%. All Must layers work end to end** |
+| Evaluation | Must for demo | 3 / 4 | 🟡 Results table, ablation and early-detection numbers done; Semgrep not run yet |
+| **Total** | | **21 / 28** | **About 75%. All Must layers work end to end; evaluation numbers recorded** |
 
 ## L1 Ingestion: "Bring your code"
 
@@ -63,32 +63,32 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 ## Evaluation (PRD section 9)
 
 - [x] ✅ **Seeded target apps:** app1, app2, app3 in `targets/`: 13 seeded bugs (9 wrapper, 4 direct) and safe decoys. First result: taint 13/13, Bandit 6/13. Spec in `targets/README.md`
-- [ ] ⬜ **Head-to-head (`eval/run.py`):** Bandit vs default Semgrep vs ZeroDay Sentinel, with caught, missed and precision
-- [ ] ⬜ **Ablation:** rules only, taint only, taint plus ML, taint plus proof
-- [ ] ⬜ **Early-detection numbers:** median diff-scan time and percent of seeded commits flagged before merge
+- [x] ✅ **Head-to-head (`eval/run.py`):** writes `eval/results.md`. Taint 13/13 (precision 76%), Bandit 6/13 (46%). Semgrep row shows "not run" until `semgrep` is installed
+- [ ] 🟡 **Ablation:** rules only, taint only and rules + taint measured; ML and proof rows stated honestly (ranker untrained, proof runner not built)
+- [x] ✅ **Early-detection numbers:** 3/3 vulnerable commits blocked by the real hook, median 0.03 s
 
 ## Engineering and delivery
 
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
-- [x] ✅ 158 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ 163 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [ ] ⬜ PR #1 reviewed and merged into `main`
 
 ## Demo prep (PRD section 16)
 
-- [ ] ⬜ All seeded wrapper bugs found, with Bandit and Semgrep results recorded
-- [ ] ⬜ Results table states the small sample size
-- [ ] ⬜ Vulnerable commit flagged by the hook in under 5 seconds (works in tests; needs the sink lists and a demo repo)
+- [x] ✅ All seeded wrapper bugs found (9/9), with Bandit results recorded (Semgrep still to run)
+- [x] ✅ Results table states the small sample size (`eval/results.md`, Caveats)
+- [x] ✅ Vulnerable commit flagged by the hook in under 5 seconds (0.03 s on each seeded app)
 - [ ] ⬜ Proof test fails before the patch and passes after
 - [ ] ⬜ Demo results cached and a backup video recorded
 - [ ] ⬜ Limitations and ethics slide ready
 
 ## Suggested next steps
 
-1. ⬜ Build `eval/run.py` for the head-to-head results table across `targets/`.
+1. ⬜ Install Semgrep and re-run `eval/run.py` to fill in the Semgrep row (`pip install semgrep`; default rules need internet).
 2. ⬜ Train the ML ranker on the three seeded apps (`python -m app.rank.train label`, then `fit`). The data is tiny, so present it as illustrative.
 3. 👥 Proof runner for 2–3 findings (Docker, no network), then patch re-test.
 4. ⬜ Custom AST checks for secrets and weak crypto.
