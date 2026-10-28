@@ -15,6 +15,10 @@ BASE_SCORE: dict[str, float] = {
     "CWE-259": 4.5,  # hard-coded password
     "CWE-327": 3.5,  # broken or risky crypto
     "CWE-328": 3.5,  # weak hash
+    "CWE-916": 4.0,  # fast hash for passwords
+    "CWE-295": 4.0,  # certificate checks off
+    "CWE-326": 3.5,  # key too short
+    "CWE-330": 3.5,  # predictable random values
 }
 DEFAULT_BASE = 3.0
 

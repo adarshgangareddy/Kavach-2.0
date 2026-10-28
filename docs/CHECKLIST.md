@@ -34,7 +34,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ **Rule layer, baseline:** Bandit and Semgrep adapters
 - [x] ✅ **Sink lists:** filled in by the team in `backend/sentinel-rules.toml`; the taint detector is on
 - [x] ✅ **Argument-aware sinks:** sink tables in `sentinel-rules.toml` (`args`, `kwargs`, `when`): `execute` only counts the SQL text, `subprocess` only with `shell=True`. Removed the parameterized-query false alarm in app2
-- [ ] ⬜ **Rule layer, custom AST checks:** hard-coded secrets and weak crypto (Bandit covers these for now)
+- [x] ✅ **Rule layer, custom AST checks** (`rules` detector): hard-coded secrets (named secrets, 8 token formats, passwords in connection URLs, `os.getenv` fallbacks, hard-coded JWT/HMAC keys) and weak crypto (MD5/SHA-1, fast hash on passwords, DES/RC4/Blowfish, ECB, old TLS, short RSA/DSA keys, certificate checks off, `random` for tokens). Word-based name matching avoids Bandit's false alarms (`token_type`, `password_field`, env names); secret values never stored; merges with Bandit (CWE-259/798 treated as one); 0 findings on Kavach's own code
 - [x] ✅ **ML ranker:** trained on the seeded targets (`python -m app.rank.train targets`), saved as `backend/sentinel-model.json` (JSON weights, no pickle). Held out by app: false positives read before 90% recall 5 → 0, precision@k 62% → 100%. Only 23 findings from 3 apps: present as indicative, not as a 100% claim. Labelling now matches the closest line first
 - [x] ✅ **Priority sort:** open first, then severity band, then `ml_rank` or confidence, then tier and location (`app/rank/priority.py`); used by scans and the API
 

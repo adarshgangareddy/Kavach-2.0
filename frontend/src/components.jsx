@@ -94,8 +94,23 @@ export function ConfirmDelete({ label = 'Delete', question = 'Delete for good?',
   )
 }
 
+/** Secrets and crypto problems are in the code itself: no user input has to reach them. */
+const CODE_PROBLEMS = {
+  'CWE-798': 'Anyone who can read the code or its history can use this secret.',
+  'CWE-259': 'Anyone who can read the code or its history can use this password.',
+  'CWE-327': 'This algorithm or setting is known to be breakable.',
+  'CWE-916': 'Passwords hashed this way can be guessed quickly if the hashes leak.',
+  'CWE-326': 'A key this short can be broken with enough computing power.',
+  'CWE-295': 'Without certificate checks, anyone on the network can pretend to be the server.',
+  'CWE-330': 'Values from the random module can be predicted by an attacker.',
+}
+
 /** One plain-English sentence: what the finding means. */
 export function plainSummary(f) {
+  if (CODE_PROBLEMS[f.cwe]) {
+    const what = f.sink.includes(' ') ? f.sink : `${f.detector} flagged this line (${f.sink})`  // tool ids have no spaces
+    return `${what}. ${CODE_PROBLEMS[f.cwe]}`
+  }
   const steps = f.path.slice(0, -1)
   if (f.source && steps.length) {
     const via = steps.length > 1 ? ` through ${steps.slice(1).join(' → ')}` : ` in ${steps[0]}`

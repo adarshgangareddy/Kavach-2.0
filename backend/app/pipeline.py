@@ -39,17 +39,25 @@ def _stronger(a: Candidate, b: Candidate) -> Candidate:
     return a if rank(a) >= rank(b) else b
 
 
+# CWEs that detectors use for the same problem: Bandit calls every hard-coded secret a
+# "hard-coded password" (CWE-259), Kavach's rules say CWE-798 for non-passwords.
+_SAME_PROBLEM = {"CWE-259": "CWE-798"}
+
+
 def deduplicate(candidates: list[Candidate]) -> list[Candidate]:
     """Merge results that several detectors report for the same file, line and CWE."""
     merged: dict[tuple[str, int, str], Candidate] = {}
     for cand in candidates:
-        key = (cand.file, cand.line, cand.cwe)
+        key = (cand.file, cand.line, _SAME_PROBLEM.get(cand.cwe, cand.cwe))
         if key not in merged:
             merged[key] = cand
             continue
         best = _stronger(merged[key], cand)
         names = sorted(set(merged[key].detector.split("+")) | {cand.detector})
-        merged[key] = best.model_copy(update={"detector": "+".join(names)})
+        update = {"detector": "+".join(names)}
+        if worded := next((c for c in (merged[key], cand) if "rules" in c.detector.split("+")), None):
+            update |= {"sink": worded.sink, "fix_suggestion": worded.fix_suggestion}  # plain words, specific fix
+        merged[key] = best.model_copy(update=update)
     return sorted(merged.values(), key=lambda c: (c.file, c.line, c.cwe))
 
 

@@ -11,6 +11,9 @@ OWASP_BY_CWE: dict[str, str] = {
     "CWE-327": "A02:2021 Cryptographic Failures",
     "CWE-328": "A02:2021 Cryptographic Failures",
     "CWE-330": "A02:2021 Cryptographic Failures",
+    "CWE-326": "A02:2021 Cryptographic Failures",
+    "CWE-916": "A02:2021 Cryptographic Failures",
+    "CWE-295": "A07:2021 Identification and Authentication Failures",
     "CWE-798": "A07:2021 Identification and Authentication Failures",
     "CWE-259": "A07:2021 Identification and Authentication Failures",
     "CWE-502": "A08:2021 Software and Data Integrity Failures",
@@ -31,6 +34,9 @@ CWE_TITLES: dict[str, str] = {
     "CWE-327": "Broken or risky cryptographic algorithm",
     "CWE-328": "Weak hash",
     "CWE-330": "Insufficiently random values",
+    "CWE-326": "Key too short",
+    "CWE-916": "Password hash too fast",
+    "CWE-295": "Certificate checks turned off",
     "CWE-502": "Deserialization of untrusted data",
     "CWE-605": "Multiple binds to the same port",
     "CWE-703": "Improper check of exceptional conditions",
@@ -52,6 +58,10 @@ REMEDIATION: dict[str, str] = {
     "CWE-327": "Use a current algorithm (for example AES-GCM from the cryptography package).",
     "CWE-328": "Use SHA-256 or stronger for integrity, and bcrypt, scrypt or Argon2 for passwords.",
     "CWE-79": "Rely on Jinja2 auto-escaping and avoid Markup()/|safe on user data.",
+    "CWE-916": "Hash passwords with Argon2, bcrypt or scrypt, which are slow and salted on purpose.",
+    "CWE-295": "Keep certificate verification on; pass a CA bundle for private certificates.",
+    "CWE-326": "Use RSA or DSA keys of at least 2048 bits, or an elliptic curve key.",
+    "CWE-330": "Use the secrets module (secrets.token_urlsafe, secrets.choice) for security values.",
 }
 REMEDIATION["CWE-77"] = REMEDIATION["CWE-78"]
 REMEDIATION["CWE-23"] = REMEDIATION["CWE-22"]

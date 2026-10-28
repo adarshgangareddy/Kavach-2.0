@@ -5,7 +5,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 
 ## Rules
 - Every layer reads and writes the Finding record in backend/app/schema.py. Do not change it without asking.
-- Scope: Python and Flask only. Bug classes: command injection, SQL injection, path traversal.
+- Scope: Python and Flask only. Bug classes: command injection, SQL injection, path traversal; the rule layer adds hard-coded secrets and weak crypto.
 - Defensive only. Detectors analyse code statically and must never execute project code.
 - Write a pytest test for every component before calling it done. Run tests after each change.
 - Tests use the marker-comment `MarkerDetector` in backend/tests/conftest.py, not real vulnerable code.
@@ -29,6 +29,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - L1 ingestion: backend/app/ingest/
 - L2 detection plug-in point: backend/app/detect/base.py (Detector, Candidate), registry.py
 - L2 taint: backend/app/detect/propagation.py (ast tracer), taint.py (detector), rules in backend/sentinel-rules.toml
+- L2 rule layer: backend/app/detect/rules.py (secrets + weak crypto AST checks; never store secret values)
 - L2 ranking: backend/app/rank/ (features, JSON model, train.py, priority sort)
 - L3 early detection: backend/app/early/ (incremental.py, hook.py, scope.py), backend/app/cli.py
 - Auth: backend/app/auth.py (Argon2id, JWT cookie), get_current_user in main.py, users + owner scoping in store.py; secrets in backend/.env (see .env.example)

@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from app.detect.adapters import BanditDetector, SemgrepDetector
 from app.detect.base import Detector
+from app.detect.rules import RulesDetector
 from app.detect.taint import TaintDetector
 
 _registry: dict[str, Detector] = {}
@@ -43,3 +44,4 @@ def use_detectors(detectors: list[Detector]) -> Iterator[None]:
 register(TaintDetector())
 register(BanditDetector())
 register(SemgrepDetector())
+register(RulesDetector())
