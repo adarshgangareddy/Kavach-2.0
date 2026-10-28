@@ -413,3 +413,5 @@ button.danger.solid:hover:not(:disabled) { background: var(--critical); filter: 
 .diff .add { background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .diff .del { background: color-mix(in srgb, var(--critical) 12%, transparent); }
 .diff .hunk { color: var(--muted); }
+.other-issues { margin: 4px 0 0; padding-left: 18px; }
+.other-issues li { margin: 4px 0; }

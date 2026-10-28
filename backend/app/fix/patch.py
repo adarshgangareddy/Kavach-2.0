@@ -19,7 +19,6 @@ import string
 from dataclasses import dataclass, field
 
 SQL, COMMAND, PATH = "CWE-89", "CWE-78", "CWE-22"
-SUPPORTED = (SQL, COMMAND, PATH)
 
 SQL_METHODS = {"execute", "executemany"}
 SUBPROCESS = {"subprocess.run", "subprocess.call", "subprocess.check_call", "subprocess.check_output",
@@ -40,6 +39,27 @@ def {SAFE_PATH_HELPER}(base, *parts):
 '''
 
 Part = str | ast.expr  # a piece of a built string: literal text or an expression
+
+
+def _helper_body(tree: ast.Module) -> str | None:
+    """The safe-path helper's code (docstring left out) as ast text, if the module defines it."""
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == SAFE_PATH_HELPER:
+            body = node.body[1:] if node.body and isinstance(node.body[0], ast.Expr) else node.body
+            return ast.dump(ast.Module([*body], []), annotate_fields=False) + ast.dump(node.args)
+    return None
+
+
+_GENUINE_HELPER = _helper_body(ast.parse(HELPER_SOURCE))
+
+
+def defines_genuine_helper(source: str) -> bool:
+    """True when the file defines Kavach's safe-path helper unchanged, so a path passed through it
+    is known to stay inside its folder. A function that only borrows the name does not count."""
+    try:
+        return _helper_body(ast.parse(source)) == _GENUINE_HELPER
+    except SyntaxError:
+        return False
 
 
 class CannotPatch(Exception):
@@ -78,11 +98,12 @@ class _Plan:
 # --- entry point -------------------------------------------------------------
 
 def suggest_patch(source: str, file: str, line: int, cwe: str) -> Patch:
-    if cwe not in SUPPORTED:
-        return Patch(False, cwe, reason=f"Automatic patches cover {', '.join(SUPPORTED)}; {cwe} has written advice only.")
+    if cwe not in PLANNERS:
+        return Patch(False, cwe, reason=f"Automatic patches do not cover {cwe} yet; it has written advice only.")
     try:
         tree = ast.parse(source)
-        plan = _PLANNERS[cwe](tree, line, source)
+        _refuse_import_line(tree, line)
+        plan = PLANNERS[cwe](tree, line, source)
         patched = _apply(source, tree, plan)
         ast.parse(patched)  # never hand back code that does not parse
     except CannotPatch as exc:
@@ -92,6 +113,15 @@ def suggest_patch(source: str, file: str, line: int, cwe: str) -> Patch:
     return Patch(True, cwe, title=plan.title, explanation=plan.explanation, notes=plan.notes,
                  diff=unified_diff(source, patched, file), patched_source=patched,
                  changed_lines=_changed_lines(source, patched))
+
+
+def _refuse_import_line(tree: ast.Module, line: int) -> None:
+    """Some tools flag `import subprocess` itself; an import has nothing to rewrite."""
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Import, ast.ImportFrom)) and node.lineno <= line <= node.end_lineno:
+            raise CannotPatch("This line only imports a module, which Bandit flags as a reminder to use it "
+                              "carefully. There is nothing to rewrite here: each call that uses it is checked "
+                              "on its own line.")
 
 
 def unified_diff(before: str, after: str, file: str) -> str:
@@ -121,6 +151,11 @@ def _pick_call(tree: ast.Module, line: int, matches) -> ast.Call:
     nearby = [c for c in calls if scope and scope.lineno <= c.lineno <= scope.end_lineno]
     if len(nearby) == 1:
         return nearby[0]
+    if nearby:  # some tools point at the line that reads the input, not the call it reaches
+        lines = sorted({c.lineno for c in nearby})
+        listed = ", ".join(map(str, lines[:-1])) + f" and {lines[-1]}" if len(lines) > 1 else str(lines[0])
+        raise CannotPatch(f"Line {line} is where the input is read, not the dangerous call. This function has "
+                          f"dangerous calls on lines {listed}: open those findings to patch them.")
     raise CannotPatch(f"Could not find the dangerous call at line {line}.")
 
 
@@ -278,6 +313,9 @@ class _Writer:
 
     def _Name(self, node: ast.Name) -> str:
         return node.id
+
+    def _Subscript(self, node: ast.Subscript) -> str:
+        return f"{self(node.value)}[{self(node.slice)}]"
 
     def _List(self, node: ast.List) -> str:
         return f"[{', '.join(map(self, node.elts))}]"
@@ -520,7 +558,8 @@ def _defined_functions(tree: ast.Module) -> set[str]:
     return {n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}
 
 
-_PLANNERS = {SQL: _plan_sql, COMMAND: _plan_command, PATH: _plan_path}
+# CWE -> function that plans the rewrite. app/fix/rule_patches.py adds the rule layer's bug types.
+PLANNERS = {SQL: _plan_sql, COMMAND: _plan_command, PATH: _plan_path}
 
 
 # --- applying the edits ------------------------------------------------------

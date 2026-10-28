@@ -5,6 +5,7 @@ from collections import Counter
 from pathlib import Path
 
 from app.detect.base import Candidate, Detector, is_whole_program
+from app.fix.patch import SAFE_PATH_HELPER, defines_genuine_helper
 from app.rank import model as ranker
 from app.rank.priority import sort_by_priority
 from app.report import owasp, severity
@@ -31,7 +32,39 @@ def run_detectors(root: Path, files: list[str], detectors: list[Detector],
             candidates.extend(det.scan(root, scope, timeout_s))
         except Exception as exc:  # noqa: BLE001 - surface any detector failure to the user
             notes.append(f"Detector {det.name} failed: {type(exc).__name__}: {exc}")
-    return candidates, notes
+    return drop_checked_paths(root, candidates, notes), notes
+
+
+PATH_CWES = {"CWE-22", "CWE-23"}
+
+
+def drop_checked_paths(root: Path, candidates: list[Candidate], notes: list[str]) -> list[Candidate]:
+    """Drop path-traversal reports on lines whose path goes through Kavach's own safe-path helper.
+
+    Other tools do not know the helper and keep reporting a fixed line. The report is dropped
+    only when the same file defines the helper exactly as the patch suggester wrote it.
+    """
+    sources: dict[str, list[str] | None] = {}
+    kept = []
+    for cand in candidates:
+        if cand.cwe in PATH_CWES and _checked_path(root, cand, sources):
+            continue
+        kept.append(cand)
+    if dropped := len(candidates) - len(kept):
+        notes.append(f"{dropped} path traversal report(s) dropped: the path is checked by Kavach's "
+                     f"{SAFE_PATH_HELPER} helper, which keeps it inside its folder.")
+    return kept
+
+
+def _checked_path(root: Path, cand: Candidate, sources: dict[str, list[str] | None]) -> bool:
+    if cand.file not in sources:
+        try:
+            text = (root / cand.file).read_text(errors="replace")
+        except OSError:
+            text = None
+        sources[cand.file] = text.splitlines() if text and defines_genuine_helper(text) else None
+    lines = sources[cand.file]
+    return bool(lines) and 0 < cand.line <= len(lines) and f"{SAFE_PATH_HELPER}(" in lines[cand.line - 1]
 
 
 def _stronger(a: Candidate, b: Candidate) -> Candidate:

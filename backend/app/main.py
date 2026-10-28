@@ -345,7 +345,7 @@ def finding_patch(finding_id: FindingId, store: StoreDep, settings: SettingsDep,
     if finding.file not in sources:
         raise HTTPException(404, "File not found in this scan")
     patch = suggest_patch(sources[finding.file], finding.file, finding.line, finding.cwe)
-    checked = (verify(sources, finding.file, patch.patched_source, finding.cwe, patch.changed_lines)
+    checked = (verify(sources, finding.file, patch.patched_source, finding.cwe, patch.changed_lines, finding.line)
                if patch.available else None)
     return asdict(patch) | {"verification": asdict(checked) if checked else None}
 

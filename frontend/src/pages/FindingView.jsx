@@ -117,6 +117,9 @@ function NumberedEditor({ value, onChange, problemLine }) {
   )
 }
 
+/** Tools number some problems differently: Bandit calls every hard-coded secret CWE-259. */
+const sameProblem = (a, b) => [a, b].every((c) => c === 'CWE-259' || c === 'CWE-798') || a === b
+
 const CHECK_LABELS = {
   fixed: { text: 'Checked by Kavach', className: 'ok' },
   'not-traced': { text: 'Pattern removed', className: 'neutral' },
@@ -143,6 +146,45 @@ function downloadDiff(finding, diff) {
   URL.revokeObjectURL(url)
 }
 
+/** Why there is no patch, plus links to the other issues in the same file (which may have one). */
+function NoPatch({ finding, reason }) {
+  const catalog = useCatalog()
+  const [others, setOthers] = useState([])
+  useEffect(() => {
+    api.findings(finding.scan_id)
+      .then((all) => setOthers(all.filter((f) => f.file === finding.file && f.id !== finding.id)))
+      .catch(() => setOthers([]))
+  }, [finding.scan_id, finding.file, finding.id])
+  const importOnly = reason.includes('only imports a module')
+
+  return (
+    <div className="patch-box">
+      <div className="patch-head">
+        <strong>{importOnly ? 'Nothing to patch on an import line' : 'No automatic patch for this finding'}</strong>
+      </div>
+      <p className="small">{reason}{importOnly ? '' : ' Follow the advice above.'}</p>
+      {importOnly && (
+        <p className="small">
+          Safe to leave as it is: mark it <strong>Accept the risk</strong> once the code that uses the module is fixed.
+        </p>
+      )}
+      {others.length > 0 && (
+        <>
+          <p className="small"><strong>Other issues in {finding.file}</strong> (open one to see its patch):</p>
+          <ul className="other-issues">
+            {others.slice(0, 8).map((f) => (
+              <li key={f.id}>
+                <a href={`#/findings/${f.id}`}>Line {f.line}: {cweTitle(catalog, f.cwe)}</a>
+                {' '}<SeverityPill score={f.severity} />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  )
+}
+
 /** Kavach's suggested code change, checked by re-tracing the project, with a button to load it. */
 function SuggestedPatch({ finding, onApply, applied }) {
   const [patch, setPatch] = useState(null)
@@ -156,9 +198,7 @@ function SuggestedPatch({ finding, onApply, applied }) {
 
   if (error) return <p className="muted small">No suggested patch: {error}</p>
   if (patch === null) return <Spinner label="Writing a patch" />
-  if (!patch.available) {
-    return <p className="patch-none muted small">No automatic patch for this one: {patch.reason} Follow the advice above.</p>
-  }
+  if (!patch.available) return <NoPatch finding={finding} reason={patch.reason} />
   const check = CHECK_LABELS[patch.verification?.status]
 
   async function copy() {
@@ -177,7 +217,7 @@ function SuggestedPatch({ finding, onApply, applied }) {
       {patch.verification && <p className="muted small">{patch.verification.message}</p>}
       {patch.notes.map((note) => <p key={note} className="patch-note small">Note: {note}</p>)}
       <div className="fix-actions">
-        <button type="button" className="primary" disabled={applied} onClick={() => onApply(patch.patched_source)}>
+        <button type="button" className="primary" disabled={applied} onClick={() => onApply(patch)}>
           {applied ? 'Patch applied below' : 'Apply patch to the editor'}
         </button>
         <button type="button" onClick={copy}>{copied ? 'Copied' : 'Copy patch'}</button>
@@ -195,7 +235,7 @@ function FixEditor({ finding, onFixed, saving }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
-  const [suggestion, setSuggestion] = useState(null)
+  const [suggestion, setSuggestion] = useState(null)  // the applied patch, while the editor still holds it
 
   useEffect(() => {
     setResult(null)
@@ -218,15 +258,18 @@ function FixEditor({ finding, onFixed, saving }) {
   }
 
   if (code === null) return error ? <ErrorBox error={error} /> : <Spinner label="Loading the file" />
-  const applied = suggestion !== null && code === suggestion
-  const same = result?.findings.filter((f) => f.cwe === finding.cwe) ?? []
+  const applied = suggestion !== null && code === suggestion.patched_source
+  // With the patch applied unchanged, judge the lines it changed; after hand edits, the whole file.
+  const inFile = result?.findings.filter((f) => sameProblem(f.cwe, finding.cwe)) ?? []
+  const same = applied ? inFile.filter((f) => suggestion.changed_lines.includes(f.line)) : inFile
+  const elsewhere = inFile.length - same.length
   const serious = same.filter((f) => f.severity >= 7)
   const kind = cweTitle(catalog, finding.cwe)
 
   return (
     <div className="fix-editor">
       <SuggestedPatch finding={finding} applied={applied}
-                      onApply={(text) => { setSuggestion(text); setCode(text); setResult(null) }} />
+                      onApply={(patch) => { setSuggestion(patch); setCode(patch.patched_source); setResult(null) }} />
       <label className="muted small" htmlFor="fix-code">
         {finding.file}, editable copy (line {finding.line} is the problem)
       </label>
@@ -243,7 +286,12 @@ function FixEditor({ finding, onFixed, saving }) {
       <ErrorBox error={error} />
       {result && (
         <div className={`rescan ${same.length === 0 ? 'ok' : serious.length ? 'bad' : 'warn'}`} role="status">
-          {same.length === 0 && <strong>Fixed: no {kind} issues left in this file.</strong>}
+          {same.length === 0 && (
+            <strong>
+              {applied ? `Fixed: this ${kind} issue is gone.` : `Fixed: no ${kind} issues left in this file.`}
+              {elsewhere > 0 && ` ${elsewhere} other ${kind} ${elsewhere === 1 ? 'issue' : 'issues'} elsewhere in this file still need fixing.`}
+            </strong>
+          )}
           {same.length > 0 && serious.length === 0 && (
             <strong>Better: {same.length} {kind} {same.length === 1 ? 'finding remains' : 'findings remain'}, none serious enough to block a commit.</strong>
           )}
