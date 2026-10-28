@@ -5,7 +5,8 @@ Official HackFest 2026 repository for team PocketRocket (T2-04).
 
 A security scanner for Python Flask apps. It takes in code, runs detectors, scores and
 classifies the findings, catches issues at commit and PR time, and tracks everything on a
-dashboard. See [docs/prd.md](docs/prd.md) for the design and build status.
+dashboard. See [docs/prd.md](docs/prd.md) for the design and
+[docs/CHECKLIST.md](docs/CHECKLIST.md) for what is done and what remains.
 
 ### Quick start
 

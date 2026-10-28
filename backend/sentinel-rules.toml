@@ -5,7 +5,7 @@
 # written and the import-resolved name ("sp.run" with `import subprocess as sp`
 # also matches "subprocess.run"). Use "*.name" to match a method on any object.
 #
-# The taint detector stays disabled until at least one rule lists a sink.
+# The taint detector is disabled when no rule lists a sink.
 
 # Decorators that mark public entry points (Flask routes).
 entry_decorators = ["*.route", "*.get", "*.post", "*.put", "*.patch", "*.delete"]
@@ -30,23 +30,23 @@ sources = [
 [[rule]]
 id = "command-injection"
 cwe = "CWE-78"
-sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sinks = ["os.system", "subprocess.run", "subprocess.call", "subprocess.Popen"]
 sanitizers = ["shlex.quote"]
 
 [[rule]]
 id = "sql-injection"
 cwe = "CWE-89"
-sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sinks = ["*.execute"]
 sanitizers = []
 
 [[rule]]
 id = "path-traversal"
 cwe = "CWE-22"
-sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sinks = ["open"]
 sanitizers = ["secure_filename", "werkzeug.utils.secure_filename"]
 
 [[rule]]
 id = "unsafe-deserialization"
 cwe = "CWE-502"
-sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sinks = ["pickle.loads"]
 sanitizers = []
