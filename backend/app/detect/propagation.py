@@ -37,6 +37,7 @@ from pathlib import Path
 
 Label = str
 Env = dict[str, frozenset[Label]]
+Fact = tuple[Label, str, int]  # (label, sink file, sink line)
 
 MAX_ROUNDS = 50
 MAX_LOOP_ITER = 10
@@ -580,13 +581,19 @@ class Project:
                       sorted({u for s in self.summaries.values() for u in s.unresolved}),
                       self.parse_errors, sorted(entries))
 
-    def _reach(self, config: Config) -> dict[str, dict[Label, Hit]]:
-        reach: dict[str, dict[Label, Hit]] = {key: {} for key in self.functions}
+    def _reach(self, config: Config) -> dict[str, dict[Fact, Hit]]:
+        """Per function: (label, sink file, sink line) -> shortest path there.
+
+        Keyed by sink location, not just label: one parameter can leak into
+        several sinks, and every one of them must be reported.
+        """
+        reach: dict[str, dict[Fact, Hit]] = {key: {} for key in self.functions}
 
         def offer(key: str, label: Label, hit: Hit) -> bool:
-            current = reach[key].get(label)
+            fact = (label, hit.file, hit.line)
+            current = reach[key].get(fact)
             if current is None or len(hit.path) < len(current.path):
-                reach[key][label] = hit
+                reach[key][fact] = hit
                 return True
             return False
 
@@ -604,7 +611,7 @@ class Project:
                     if site.target is None or not reach[site.target]:
                         continue
                     binding = bind(self.functions[site.target], site)
-                    for label, hit in list(reach[site.target].items()):
+                    for (label, _, _), hit in list(reach[site.target].items()):
                         extended = Hit(hit.sink, hit.file, hit.line, (fn.display, *hit.path))
                         for mapped in substitute(frozenset({label}), binding, params_only=True):
                             changed |= offer(fn.key, mapped, extended)
@@ -625,22 +632,27 @@ class Project:
         called = {s.target for summ in self.summaries.values() for s in summ.calls if s.target}
         return set(self.functions) - called  # roots of the call graph
 
-    def _flows(self, reach: dict[str, dict[Label, Hit]], entries: set[str]) -> list[Flow]:
+    def _flows(self, reach: dict[str, dict[Fact, Hit]], entries: set[str]) -> list[Flow]:
         flows = []
         for key, facts in reach.items():
             fn = self.functions[key]
-            for label, hit in facts.items():
+            for (label, _, _), hit in facts.items():
                 base = label.lstrip("~")
                 if base.startswith("source:") or (base.startswith("param:") and key in entries):
                     flows.append(Flow(fn.qualname, fn.file, base, hit.sink, hit.file, hit.line,
                                       hit.path, label.startswith("~")))
-        return sorted(flows, key=lambda f: (f.entry_file, f.entry, f.origin, f.sanitized))
+        return sorted(flows, key=lambda f: (f.entry_file, f.entry, f.origin, f.sanitized,
+                                            f.file, f.line))
 
-    def _wrappers(self, reach: dict[str, dict[Label, Hit]]) -> dict[str, dict[str, str]]:
+    def _wrappers(self, reach: dict[str, dict[Fact, Hit]]) -> dict[str, dict[str, str]]:
         """Functions whose parameter reaches a sink without sanitizing: project-specific sinks."""
         out: dict[str, dict[str, str]] = {}
         for key, facts in reach.items():
-            params = {lbl[6:]: hit.sink for lbl, hit in facts.items() if lbl.startswith("param:")}
+            sinks: dict[str, set[str]] = {}
+            for (label, _, _), hit in facts.items():
+                if label.startswith("param:"):
+                    sinks.setdefault(label[6:], set()).add(hit.sink)
+            params = {name: ", ".join(sorted(found)) for name, found in sinks.items()}
             if params:
                 fn = self.functions[key]
                 out[f"{fn.file}::{fn.qualname}"] = dict(sorted(params.items()))

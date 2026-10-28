@@ -263,3 +263,16 @@ def test_chained_calls_are_separate_call_sites():
     flows = {f.entry: f for f in result.flows}
     assert flows["entry"].sink == "connect().store"
     assert flows["nested"].sink == "connect().store"  # q flows into the receiver
+
+
+def test_one_input_reaching_several_sinks_reports_each():
+    result = run({"m.py": """
+        def helper(v):
+            store(v)
+
+        def entry(q):
+            store(q)
+            helper(q)
+    """})
+    flows = [(f.line, f.path) for f in result.flows if f.entry == "entry"]
+    assert flows == [(3, ("entry()", "helper()", "store")), (6, ("entry()", "store"))]
