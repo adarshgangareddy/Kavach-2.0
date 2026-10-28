@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { api } from './api.js'
+import { api, UNAUTHORIZED_EVENT } from './api.js'
+import { Spinner } from './components.jsx'
 import Home from './pages/Home.jsx'
+import Login from './pages/Login.jsx'
 import ScanView from './pages/ScanView.jsx'
 import FindingView from './pages/FindingView.jsx'
 
@@ -25,6 +27,25 @@ function useHashRoute() {
   return route
 }
 
+/** undefined while checking the session, null when signed out, else {email, role}. */
+function useSession() {
+  const [user, setUser] = useState(undefined)
+  useEffect(() => {
+    api.me().then(setUser).catch(() => setUser(null))
+    const signedOut = () => setUser(null)
+    window.addEventListener(UNAUTHORIZED_EVENT, signedOut)
+    return () => window.removeEventListener(UNAUTHORIZED_EVENT, signedOut)
+  }, [])
+  return [user, setUser]
+}
+
+/** Protected route wrapper: renders the page only for a signed-in user, else the login form. */
+function RequireAuth({ user, onSignedIn, children }) {
+  if (user === undefined) return <Spinner label="Checking your session" />
+  if (user === null) return <Login onSignedIn={onSignedIn} />
+  return children
+}
+
 function DetectorBadge() {
   const [detectors, setDetectors] = useState(null)
   useEffect(() => {
@@ -42,10 +63,22 @@ function DetectorBadge() {
 
 export default function App() {
   const route = useHashRoute()
+  const [user, setUser] = useSession()
   const [catalog, setCatalog] = useState({})
   useEffect(() => {
-    api.cweCatalog().then(setCatalog).catch(() => {})
-  }, [])
+    if (user) api.cweCatalog().then(setCatalog).catch(() => {})
+  }, [user])
+
+  async function signOut() {
+    await api.logout().catch(() => {})
+    setUser(null)
+    window.location.hash = '#/'
+  }
+
+  function signedIn(who) {
+    setUser(who)
+    if (route === '/login') window.location.hash = '#/'  // otherwise stay on the page they asked for
+  }
 
   let page
   const scan = route.match(/^\/scans\/(S-[0-9a-f]{8})$/)
@@ -66,12 +99,19 @@ export default function App() {
           </svg>
           ZeroDay Sentinel
         </a>
-        <nav className="topnav">
-          <a href="#/" className="button primary small-button">+ New scan</a>
-          <DetectorBadge />
-        </nav>
+        {user && (
+          <nav className="topnav">
+            <DetectorBadge />
+            <span className="muted small user-email" title={`Signed in as ${user.email} (${user.role})`}>
+              {user.email}
+            </span>
+            <button type="button" className="small-button" onClick={signOut}>Log out</button>
+          </nav>
+        )}
       </header>
-      <main className="container">{page}</main>
+      <main className="container">
+        <RequireAuth user={user} onSignedIn={signedIn}>{page}</RequireAuth>
+      </main>
     </CatalogContext.Provider>
   )
 }

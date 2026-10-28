@@ -1,12 +1,23 @@
 const BASE = '/api'
 
+/** Fired when the API says the session is missing or expired; the app shows the login page. */
+export const UNAUTHORIZED_EVENT = 'sentinel:unauthorized'
+
 async function request(path, options = {}) {
-  const res = await fetch(BASE + path, options)
+  // The session lives in an HttpOnly cookie: JavaScript never sees it, the browser sends it.
+  const res = await fetch(BASE + path, { credentials: 'same-origin', ...options })
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+  }
   if (!res.ok) {
     let message = res.statusText
     try {
       const body = await res.json()
-      message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)
+      message = typeof body.detail === 'string'
+        ? body.detail
+        : Array.isArray(body.detail)  // FastAPI validation errors: show the human part
+          ? body.detail.map((d) => String(d.msg ?? '').replace(/^Value error, /, '')).join(' ')
+          : JSON.stringify(body.detail)
     } catch {
       /* non-JSON error body */
     }
@@ -18,6 +29,21 @@ async function request(path, options = {}) {
 const json = (path, options) => request(path, options).then((r) => r.json())
 
 export const api = {
+  me: () => json('/auth/me'),
+  login: (email, password) =>
+    json('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }),
+  logout: () => json('/auth/logout', { method: 'POST' }),
+  register: (email, password) =>
+    json('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }),
+  health: () => json('/health'),
   detectors: () => json('/detectors'),
   cweCatalog: () => json('/cwe'),
   listScans: () => json('/scans'),
