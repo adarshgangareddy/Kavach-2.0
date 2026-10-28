@@ -12,15 +12,32 @@ from app.ingest.workspace import workspace_for
 from app.models import Scan, ScanStatus
 from app.pipeline import build_findings, run_detectors, severity_counts
 from app.store import Store
+from app import vault
 
 NO_DETECTOR_NOTE = ("No detectors are installed or enabled, so no findings can be produced. "
                     "Install bandit or semgrep, or register the team detector.")
 
 
-def source_root(scan_id: str, settings: Settings) -> Path:
-    """Directory the scan's relative file paths are resolved against."""
-    src = workspace_for(scan_id, settings) / "src"
+def plaintext_root(src: Path) -> Path:
+    """Directory a workspace's relative file paths are resolved against."""
     return upload.project_root(src) if src.exists() and any(src.iterdir()) else src
+
+
+def source_root(scan_id: str, settings: Settings) -> Path:
+    """Plaintext root while a scan is still running (afterwards the vault holds it)."""
+    return plaintext_root(workspace_for(scan_id, settings) / "src")
+
+
+def _seal(scan: Scan, root: Path, settings: Settings) -> None:
+    """Encrypt the workspace at rest; never leave plaintext behind, even on failure."""
+    try:
+        kept = vault.seal(scan.id, root, settings)
+        scan.notes.append(f"Source stored encrypted (AES-256-GCM): {kept} Python files kept for "
+                          "the code viewer; all plaintext files deleted.")
+    except vault.VaultError as exc:
+        vault.discard_plaintext(scan.id, settings)
+        scan.notes.append(f"Source could not be encrypted ({exc}); it was deleted instead, so the "
+                          "code viewer is unavailable for this scan.")
 
 
 def analyse(scan: Scan, root: Path, store: Store, settings: Settings) -> Scan:
@@ -39,6 +56,7 @@ def analyse(scan: Scan, root: Path, store: Store, settings: Settings) -> Scan:
     scan.detectors = [d.name for d in detectors]
     scan.finding_count = len(findings)
     scan.severity_counts = severity_counts(findings)
+    _seal(scan, root, settings)
     scan.status = ScanStatus.DONE
     scan.finished_at = time.time()
     store.save_scan(scan)
@@ -57,6 +75,9 @@ def _run(scan: Scan, store: Store, settings: Settings, prepare: Callable[[Path],
     except Exception as exc:  # noqa: BLE001 - background job: record, never crash the worker
         _fail(scan, store, f"Internal error: {type(exc).__name__}")
         raise
+    finally:  # a failed scan has nothing to show; its upload must not stay on disk
+        if not vault.is_sealed(scan.id, settings):
+            vault.discard_plaintext(scan.id, settings)
 
 
 def _fail(scan: Scan, store: Store, message: str) -> None:

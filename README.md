@@ -85,3 +85,9 @@ GitHub code scanning, so findings appear on the changed lines.
 - GitHub ingestion accepts only `https://github.com/owner/repo` URLs. Clones are shallow,
   non-interactive, time-limited and do not create symlinks.
 - Detectors run static analysis only, and no scanned code is ever executed.
+- Uploaded code is encrypted at rest. After each scan, only the Python files the code viewer
+  needs are kept, encrypted with AES-256-GCM into `src.enc`, bound to the scan ID; every plaintext
+  file (including `.env` and other non-Python files) is deleted. The viewer decrypts in memory.
+  Set the key with `SENTINEL_DATA_KEY` (32 bytes, url-safe base64; generate one with
+  `python -c "from app.vault import generate_key; print(generate_key())"`). Without it, a key file
+  is created once at `backend/.sentinel-data/vault.key` with permissions 0600.

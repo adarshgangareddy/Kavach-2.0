@@ -13,6 +13,7 @@ dependencies = [
     "pydantic>=2.9",
     "python-multipart>=0.0.9",
     "fpdf2>=2.7",
+    "cryptography>=42",  # AES-256-GCM encryption of scan workspaces at rest
 ]
 
 [project.optional-dependencies]

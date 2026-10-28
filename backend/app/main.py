@@ -1,5 +1,7 @@
 """FastAPI application (PRD section 8, L5 API)."""
 
+import logging
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
@@ -21,8 +23,20 @@ from app.report import owasp, sarif
 from app.report.export import json_report, pdf_report
 from app.schema import Finding, Status
 from app.store import Store
+from app import vault
 
-app = FastAPI(title="ZeroDay Sentinel", version=__version__)
+log = logging.getLogger("zeroday_sentinel")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Encrypt any workspace still in plaintext (scans from before encryption at rest)."""
+    if sealed := vault.seal_existing(get_settings()):
+        log.warning("Encrypted %d plaintext scan workspaces at rest", sealed)
+    yield
+
+
+app = FastAPI(title="ZeroDay Sentinel", version=__version__, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -178,7 +192,15 @@ def sarif_export(scan_id: ScanId, store: StoreDep) -> JSONResponse:
 def source_file(scan_id: ScanId, store: StoreDep, settings: SettingsDep,
                 path: str = Query(..., min_length=1, max_length=512)) -> str:
     _scan_or_404(store, scan_id)
-    target = resolve_source_file(service.source_root(scan_id, settings), path)
+    if vault.is_sealed(scan_id, settings):  # decrypted in memory, never written back to disk
+        try:
+            text = vault.read_file(scan_id, path, settings)
+        except vault.VaultError as exc:
+            raise HTTPException(409, f"Source unavailable: {exc}") from exc
+        if text is None:
+            raise HTTPException(404, "File not found in this scan")
+        return text
+    target = resolve_source_file(service.source_root(scan_id, settings), path)  # scan still running
     if target is None:
         raise HTTPException(404, "File not found in this scan")
     return target.read_text(encoding="utf-8", errors="replace")

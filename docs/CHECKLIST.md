@@ -70,10 +70,11 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 
 ## Engineering and delivery
 
+- [x] ✅ Encryption at rest: scan workspaces stored as AES-256-GCM archives bound to the scan ID; plaintext deleted after each scan (and on failure); existing workspaces migrated at startup (`app/vault.py`)
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
-- [x] ✅ 177 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ 187 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [x] ✅ PR #1 and PR #2 merged into `main`
