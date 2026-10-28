@@ -44,9 +44,16 @@ when `conftest.py` or packaging changes. `tests/test_targets_regression.py` re-s
 backend/.venv/bin/python eval/run.py
 ```
 
-Runs Bandit, default Semgrep (if installed) and ZeroDay Sentinel on every app in `targets/`, and
+Runs Bandit, Semgrep (`p/python` registry rules) and ZeroDay Sentinel on every app in `targets/`, and
 writes `eval/results.md` (head-to-head, per app, missed bugs, ablation, early-detection timing,
 caveats) and `eval/results.json`. Targets are scanned statically and never run.
+
+Install Semgrep as an isolated tool, not into `backend/.venv`: it pins library versions that
+conflict with FastAPI. Its rules download at run time, so it needs internet access.
+
+```bash
+uv tool install semgrep        # or: pipx install semgrep
+```
 
 ### Early detection
 

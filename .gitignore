@@ -19,6 +19,7 @@ labeled*.jsonl
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 
 # OS / editors
 .DS_Store

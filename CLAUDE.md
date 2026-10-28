@@ -22,6 +22,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - Hook: scripts/install-hook.sh
 - Watch: sentinel watch [--scan] [--once]  (writes .git/sentinel-status.json)
 - Eval: backend/.venv/bin/python eval/run.py  (writes eval/results.md and results.json)
+- Semgrep: install with `uv tool install semgrep`, never into backend/.venv (it breaks FastAPI's opentelemetry pin)
 
 ## Where things live
 - L1 ingestion: backend/app/ingest/

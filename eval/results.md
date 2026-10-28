@@ -1,26 +1,27 @@
 # ZeroDay Sentinel evaluation
 
-Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated 2026-10-28 16:42 by `eval/run.py`.
+Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated 2026-10-28 17:06 by `eval/run.py`.
 
 ## Head-to-head
 
 | Tool | Caught | Recall | Wrapper bugs | Direct bugs | Extra findings | Precision | Extra at severity ≥ 7 | Scan time |
 |---|---|---|---|---|---|---|---|---|
-| Bandit | 6/13 | 46% | 4/9 | 2/4 | 7 | 46% | 0 | 0.26s |
-| Semgrep (default rules) | not run (semgrep not installed) | | | | | | | |
+| Bandit | 6/13 | 46% | 4/9 | 2/4 | 7 | 46% | 0 | 0.23s |
+| Semgrep (p/python rules) | 7/13 | 54% | 3/9 | 4/4 | 3 | 70% | 0 | 3.96s |
 | ZeroDay Sentinel (taint) | 13/13 | 100% | 9/9 | 4/4 | 4 | 76% | 0 | 0.01s |
 
 ## Per app
 
-| App | Bugs | Bandit | ZeroDay Sentinel (taint) |
-|---|---|---|---|
-| app1 | 4 | 2/4 | 4/4 |
-| app2 | 5 | 3/5 | 5/5 |
-| app3 | 4 | 1/4 | 4/4 |
+| App | Bugs | Bandit | Semgrep (p/python rules) | ZeroDay Sentinel (taint) |
+|---|---|---|---|---|
+| app1 | 4 | 2/4 | 2/4 | 4/4 |
+| app2 | 5 | 3/5 | 3/5 | 5/5 |
+| app3 | 4 | 1/4 | 2/4 | 4/4 |
 
 ## Missed bugs
 
 - **Bandit:** app1/helpers.py:11 CWE-22 (wrapper), app1/helpers.py:21 CWE-89 (wrapper), app2/helpers.py:12 CWE-89 (wrapper), app2/app.py:36 CWE-22 (direct), app3/helpers.py:7 CWE-22 (wrapper), app3/helpers.py:16 CWE-89 (wrapper), app3/app.py:36 CWE-22 (direct)
+- **Semgrep (p/python rules):** app1/helpers.py:11 CWE-22 (wrapper), app1/helpers.py:21 CWE-89 (wrapper), app2/helpers.py:12 CWE-89 (wrapper), app2/helpers.py:16 CWE-78 (wrapper), app3/helpers.py:7 CWE-22 (wrapper), app3/helpers.py:16 CWE-89 (wrapper)
 - **ZeroDay Sentinel (taint):** none
 
 ## Ablation
@@ -39,15 +40,15 @@ Each app: helpers committed first, then a commit adding the routes, run through 
 
 | App | Commit blocked | Hook time |
 |---|---|---|
-| app1 | yes | 0.02s |
-| app2 | yes | 0.02s |
-| app3 | yes | 0.02s |
+| app1 | yes | 0.03s |
+| app2 | yes | 0.03s |
+| app3 | yes | 0.03s |
 
-Vulnerable commits blocked before merge: 3/3 (100%). Median hook time: 0.02s.
+Vulnerable commits blocked before merge: 3/3 (100%). Median hook time: 0.03s.
 
 ## Caveats
 
 - Small sample: 3 apps and 13 seeded bugs. These numbers are indicative, not conclusive.
 - The targets were written by our own team, with the bug classes our rules cover. Results on real-world code will be lower.
 - A finding matches a seeded bug when file and CWE agree and the line is within ±2. Anything else counts as an extra finding, including low-severity reports of the safe decoys.
-- Semgrep (default rules) was not run: semgrep not installed.
+- Semgrep uses its public registry ruleset (`p/python` unless SENTINEL_SEMGREP_CONFIG is set), downloaded at run time with metrics off. `--config auto` is not used because it requires sending metrics.

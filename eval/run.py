@@ -87,7 +87,7 @@ class ToolScore:
 def default_tools() -> list[tuple[str, list]]:
     return [
         ("Bandit", [BanditDetector()]),
-        ("Semgrep (default rules)", [SemgrepDetector()]),
+        (f"Semgrep ({SemgrepDetector().config} rules)", [SemgrepDetector()]),
         ("ZeroDay Sentinel (taint)", [TaintDetector()]),
     ]
 
@@ -268,6 +268,9 @@ def render(apps: list[Path], tools: list[ToolScore], ablation: list[ToolScore],
         "- A finding matches a seeded bug when file and CWE agree and the line is within ±2. "
         "Anything else counts as an extra finding, including low-severity reports of the safe "
         "decoys.",
+        "- Semgrep uses its public registry ruleset (`p/python` unless SENTINEL_SEMGREP_CONFIG is "
+        "set), downloaded at run time with metrics off. `--config auto` is not used because it "
+        "requires sending metrics.",
     ]
     lines += [f"- {t.name} was not run: {t.note}." for t in tools if not t.available]
     return "\n".join(lines) + "\n"
