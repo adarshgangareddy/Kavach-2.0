@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { ConfirmDelete, ErrorBox, Spinner } from '../components.jsx'
 import HeroBackdrop from '../components/HeroBackdrop.jsx'
+import Tilt from '../components/Tilt.jsx'
 
 const TABS = [
   { id: 'zip', label: 'Upload a zip' },
@@ -19,13 +20,13 @@ function Steps() {
   return (
     <ol className="steps" aria-label="How it works">
       {STEPS.map((s) => (
-        <li key={s.n}>
+        <Tilt as="li" key={s.n}>
           <span className="step-n">{s.n}</span>
           <div>
             <strong>{s.title}</strong>
             <p className="muted small">{s.text}</p>
           </div>
-        </li>
+        </Tilt>
       ))}
     </ol>
   )
@@ -133,7 +134,7 @@ function ScanList() {
       {scans?.length > 0 && (
         <ul className="scan-list">
           {scans.map((s) => (
-            <li key={s.id} className="scan-item">
+            <Tilt as="li" key={s.id} className="scan-item">
               <a href={`#/scans/${s.id}`} className="scan-row">
                 <span className="scan-name">
                   <strong className="truncate">{s.source_ref}</strong>
@@ -149,7 +150,7 @@ function ScanList() {
                                disabled={s.status === 'running' || s.status === 'queued'}
                                onConfirm={() => remove(s)} />
               </span>
-            </li>
+            </Tilt>
           ))}
         </ul>
       )}

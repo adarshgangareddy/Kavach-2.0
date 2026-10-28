@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { api, UNAUTHORIZED_EVENT } from './api.js'
 import { Spinner } from './components.jsx'
+import PageTransition from './components/PageTransition.jsx'
 import ReduceEffectsToggle from './components/ReduceEffectsToggle.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
@@ -117,7 +118,9 @@ export default function App() {
         )}
       </header>
       <main className="container">
-        <RequireAuth user={user} onSignedIn={signedIn}>{page}</RequireAuth>
+        <RequireAuth user={user} onSignedIn={signedIn}>
+          <PageTransition routeKey={route}>{page}</PageTransition>
+        </RequireAuth>
       </main>
     </CatalogContext.Provider>
   )

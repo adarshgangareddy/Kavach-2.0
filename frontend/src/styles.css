@@ -495,3 +495,28 @@ img, svg, canvas { max-width: 100%; }
    let them shrink so code scrolls inside its own box instead of widening the page. */
 .fix-editor > *, .patch-box, .patch-box > *, .grid > *, .finding-head > *, .pathflow > * { min-width: 0; }
 .diff { overflow-x: auto; }
+
+/* --- Dashboard motion ---------------------------------------------------------------- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.page { display: grid; gap: 16px; min-width: 0; }
+.tilt { transition: transform 160ms ease-out, box-shadow 160ms ease-out; transform-style: preserve-3d; will-change: transform; }
+.tilt:hover { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(34, 211, 238, 0.12); }
+
+/* Severity chart on the scan summary */
+.severity-viz { margin: 12px 0 4px; }
+.severity-viz .card.chart { background: transparent; border: none; box-shadow: none; padding: 0; backdrop-filter: none; }
+.sevbars-stage { position: relative; height: 210px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: radial-gradient(ellipse at center 70%, rgba(34, 211, 238, 0.06), transparent 70%), var(--code-bg); overflow: hidden; }
+.sevbars-3d { position: absolute; inset: 0; }
+.sevbars-tips { position: absolute; inset: 0; pointer-events: none; }
+.sevbars-tip { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 12px; text-transform: capitalize;
+  padding: 1px 6px; border-radius: 6px; background: rgba(7, 10, 18, 0.7); }
+.sevbars-tooltip { position: absolute; left: 12px; bottom: 10px; max-width: calc(100% - 24px); font-size: 12.5px;
+  padding: 6px 10px; border-radius: 8px; background: rgba(13, 19, 34, 0.92); border: 1px solid var(--border-strong);
+  pointer-events: none; overflow-wrap: anywhere; }
+/* Section headers with filters wrap on narrow screens instead of spilling out of the card */
+.section-head { flex-wrap: wrap; }
+.filters-inline { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; max-width: 100%; }
+.filters-inline input[type="search"] { flex: 1 1 160px; min-width: 0; width: auto; }
+.filters-inline select { flex: 0 1 auto; width: auto; max-width: 100%; }

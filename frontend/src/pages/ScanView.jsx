@@ -3,6 +3,9 @@ import { api, severityLabel, SEVERITY_ORDER, STATUSES } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
 import { BarChart, ConfirmDelete, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary, severityRows } from '../components.jsx'
 import CallGraphPanel from '../components/CallGraphPanel.jsx'
+import CountUp from '../components/CountUp.jsx'
+import SeverityViz from '../components/SeverityViz.jsx'
+import Tilt from '../components/Tilt.jsx'
 
 const POLL_MS = 1000
 
@@ -75,7 +78,7 @@ function SeverityChips({ findings, selected, onSelect }) {
         <button key={s} type="button" aria-pressed={selected === s}
                 className={`chip sev-${s} ${selected === s ? 'on' : ''}`}
                 onClick={() => onSelect(selected === s ? '' : s)}>
-          <strong>{counts[s]}</strong> {s}
+          <strong><CountUp value={counts[s]} /></strong> {s}
         </button>
       ))}
     </div>
@@ -104,18 +107,18 @@ function ToolComparison({ scan, findings, selected, onSelect }) {
     <div className="compare" aria-label="Kavach compared with other tools on this scan">
       <p className="compare-lead">
         {counts['kavach-only'] > 0
-          ? <><strong>{counts['kavach-only']}</strong> {counts['kavach-only'] === 1 ? 'issue' : 'issues'} found only by Kavach, missed by {others}.</>
+          ? <><strong><CountUp value={counts['kavach-only']} /></strong> {counts['kavach-only'] === 1 ? 'issue' : 'issues'} found only by Kavach, missed by {others}.</>
           : <>Kavach found nothing extra on this scan; every issue was also found by {others}.</>}
       </p>
       <div className="compare-groups" role="group" aria-label="Filter by which tools found an issue">
         {GROUPS.map((g) => (
-          <button key={g.id} type="button" aria-pressed={selected === g.id} disabled={!counts[g.id]}
-                  className={`compare-group ${g.accent ? 'accent' : ''} ${selected === g.id ? 'on' : ''}`}
-                  onClick={() => onSelect(selected === g.id ? '' : g.id)}>
-            <span className="compare-count">{counts[g.id]}</span>
+          <Tilt as="button" key={g.id} type="button" aria-pressed={selected === g.id} disabled={!counts[g.id]}
+                className={`compare-group ${g.accent ? 'accent' : ''} ${selected === g.id ? 'on' : ''}`}
+                onClick={() => onSelect(selected === g.id ? '' : g.id)}>
+            <span className="compare-count"><CountUp value={counts[g.id]} /></span>
             <span className="compare-title">{g.title}</span>
             <span className="muted small">{g.note}</span>
-          </button>
+          </Tilt>
         ))}
       </div>
       <p className="muted small">
@@ -212,11 +215,15 @@ export default function ScanView({ scanId }) {
           ) : (
             <>
               <p className={`verdict ${blocking ? 'bad' : 'ok'}`}>
-                {open.length} open {open.length === 1 ? 'issue' : 'issues'}
-                {blocking > 0 ? `, ${blocking} serious enough to block a commit (severity 7+).` : ', none serious enough to block a commit.'}
+                <CountUp value={open.length} /> open {open.length === 1 ? 'issue' : 'issues'}
+                {blocking > 0
+                  ? <>, <CountUp value={blocking} /> serious enough to block a commit (severity 7+).</>
+                  : ', none serious enough to block a commit.'}
               </p>
               <SeverityChips findings={open} selected={filters.severity}
                              onSelect={(v) => setFilters({ ...filters, severity: v })} />
+              <SeverityViz findings={open} selected={filters.severity}
+                           onSelect={(v) => setFilters({ ...filters, severity: v })} />
               <ToolComparison scan={scan} findings={findings} selected={filters.found}
                               onSelect={(v) => setFilters({ ...filters, found: v, status: v ? '' : filters.status })} />
             </>
