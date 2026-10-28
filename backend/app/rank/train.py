@@ -42,24 +42,32 @@ class Dataset:
 
 # --- labelling ---------------------------------------------------------------
 
-def label_findings(findings: list[dict], truth: list[dict],
-                   tolerance: int = LINE_TOLERANCE) -> list[int]:
-    """1 if a finding matches a ground-truth bug (same file and CWE, line within tolerance).
-
-    Each ground-truth bug can be claimed by at most one finding, so duplicate
+def match_truth(findings: list[dict], truth: list[dict],
+                tolerance: int = LINE_TOLERANCE) -> list[dict | None]:
+    """The ground-truth bug each finding matches (same file and CWE, line within
+    tolerance), or None. Each bug is claimed by at most one finding, so duplicate
     reports of the same bug count as false positives after the first.
     """
-    unclaimed = [dict(t) for t in truth]
-    labels = []
-    for f in sorted(findings, key=lambda f: (f.get("file", ""), f.get("line", 0))):
-        match = next((t for t in unclaimed
-                      if t.get("file") == f.get("file") and t.get("cwe") == f.get("cwe")
-                      and abs(int(t.get("line", 0)) - int(f.get("line", 0))) <= tolerance), None)
-        if match is not None:
-            unclaimed.remove(match)
-        labels.append((f, int(match is not None)))
-    order = {id(f): label for f, label in labels}
-    return [order[id(f)] for f in findings]
+    unclaimed = list(range(len(truth)))
+    matches: list[dict | None] = [None] * len(findings)
+    order = sorted(range(len(findings)),
+                   key=lambda i: (findings[i].get("file", ""), findings[i].get("line", 0)))
+    for i in order:
+        f = findings[i]
+        hit = next((j for j in unclaimed
+                    if truth[j].get("file") == f.get("file") and truth[j].get("cwe") == f.get("cwe")
+                    and abs(int(truth[j].get("line", 0)) - int(f.get("line", 0))) <= tolerance),
+                   None)
+        if hit is not None:
+            unclaimed.remove(hit)
+            matches[i] = truth[hit]
+    return matches
+
+
+def label_findings(findings: list[dict], truth: list[dict],
+                   tolerance: int = LINE_TOLERANCE) -> list[int]:
+    """1 if a finding matches a ground-truth bug, else 0 (see match_truth)."""
+    return [int(m is not None) for m in match_truth(findings, truth, tolerance)]
 
 
 def load_dataset(path: Path) -> Dataset:

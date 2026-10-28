@@ -24,6 +24,20 @@ npm install
 npm run dev                                     # dashboard on :5173
 ```
 
+### Tests
+
+```bash
+cd backend
+.venv/bin/pytest -q                                  # full suite
+.venv/bin/python -m app.devtools.regress             # only tests affected by your changes
+.venv/bin/python -m app.devtools.regress --base origin/main --dry-run
+```
+
+`app.devtools.regress` reads the import graph of `app/` and `tests/` and runs only the tests that
+depend on changed files. It runs the full suite whenever narrowing would be unsafe, for example
+when `conftest.py` or packaging changes. `tests/test_targets_regression.py` re-scans every seeded app in
+`targets/` and fails if a bug it used to catch is now missed, or if false positives go up.
+
 ### Early detection
 
 ```bash

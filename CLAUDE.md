@@ -15,6 +15,8 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - Setup: cd backend && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]" bandit
 - Backend: cd backend && .venv/bin/uvicorn app.main:app --reload
 - Tests: cd backend && .venv/bin/pytest -q
+- Affected tests only: cd backend && .venv/bin/python -m app.devtools.regress [--base origin/main] [--dry-run]
+- Update target baselines: cd backend && SENTINEL_UPDATE_BASELINE=1 .venv/bin/pytest tests/test_targets_regression.py
 - Frontend: cd frontend && npm install && npm run dev  (proxies /api to :8000)
 - CLI: sentinel scan PATH [--diff-base REF] [--format text|json|sarif]
 - Hook: scripts/install-hook.sh

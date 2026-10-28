@@ -62,7 +62,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 
 ## Evaluation (PRD section 9)
 
-- [ ] 👥 **Seeded target apps:** small Flask apps with wrapper bugs and a ground-truth JSON, written by the team in `targets/`
+- [ ] 👥 **Seeded target apps:** in progress (teammate). Format and `truth.json` spec in `targets/README.md`; check with `python -m app.rank.truth ../targets/app1`
 - [ ] ⬜ **Head-to-head (`eval/run.py`):** Bandit vs default Semgrep vs ZeroDay Sentinel, with caught, missed and precision
 - [ ] ⬜ **Ablation:** rules only, taint only, taint plus ML, taint plus proof
 - [ ] ⬜ **Early-detection numbers:** median diff-scan time and percent of seeded commits flagged before merge
@@ -70,7 +70,9 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 ## Engineering and delivery
 
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
-- [x] ✅ 117 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
+- [ ] 🟡 Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Built; activates when the seeded targets land
+- [x] ✅ 142 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [ ] ⬜ PR #1 reviewed and merged into `main`
