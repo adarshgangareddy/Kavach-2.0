@@ -164,8 +164,14 @@ class TaintDetector:
             return self.path.exists()
 
     def scan(self, root: Path, files: list[str], timeout_s: float) -> list[Candidate]:
+        return self.scan_project(Project.from_directory(root, files))
+
+    def scan_sources(self, sources: dict[str, str]) -> list[Candidate]:
+        """Same analysis on source text held in memory: {relative/path.py: text}."""
+        return self.scan_project(Project.from_sources(sources))
+
+    def scan_project(self, project: Project) -> list[Candidate]:
         rules = load_rules(self.path)
-        project = Project.from_directory(root, files)
         out: list[Candidate] = []
         for rule in rules.active():
             config = Config(sinks=rule.sinks, sources=rules.sources,

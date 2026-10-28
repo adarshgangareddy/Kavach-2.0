@@ -117,6 +117,76 @@ function NumberedEditor({ value, onChange, problemLine }) {
   )
 }
 
+const CHECK_LABELS = {
+  fixed: { text: 'Checked by Kavach', className: 'ok' },
+  'not-traced': { text: 'Pattern removed', className: 'neutral' },
+  'still-found': { text: 'Needs review', className: 'warn' },
+}
+
+/** The diff without its file header lines, each line marked as added, removed or context. */
+function DiffView({ diff }) {
+  const rows = diff.split('\n').filter((l) => l && !l.startsWith('---') && !l.startsWith('+++'))
+  return (
+    <pre className="diff" aria-label="Suggested change">
+      {rows.map((l, i) => {
+        const kind = l.startsWith('@@') ? 'hunk' : l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : ''
+        return <div key={i} className={kind}>{kind === 'hunk' ? '⋯' : l}</div>
+      })}
+    </pre>
+  )
+}
+
+function downloadDiff(finding, diff) {
+  const url = URL.createObjectURL(new Blob([diff], { type: 'text/x-diff' }))
+  const link = Object.assign(document.createElement('a'), { href: url, download: `kavach-fix-${finding.id}.diff` })
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+/** Kavach's suggested code change, checked by re-tracing the project, with a button to load it. */
+function SuggestedPatch({ finding, onApply, applied }) {
+  const [patch, setPatch] = useState(null)
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    setPatch(null)
+    setError('')
+    api.patch(finding.id).then(setPatch).catch((e) => setError(e.message))
+  }, [finding.id])
+
+  if (error) return <p className="muted small">No suggested patch: {error}</p>
+  if (patch === null) return <Spinner label="Writing a patch" />
+  if (!patch.available) {
+    return <p className="patch-none muted small">No automatic patch for this one: {patch.reason} Follow the advice above.</p>
+  }
+  const check = CHECK_LABELS[patch.verification?.status]
+
+  async function copy() {
+    await navigator.clipboard.writeText(patch.diff).catch(() => {})
+    setCopied(true)
+  }
+
+  return (
+    <div className="patch-box">
+      <div className="patch-head">
+        <strong>Suggested patch: {patch.title}</strong>
+        {check && <span className={`check ${check.className}`}>{check.text}</span>}
+      </div>
+      <p className="small">{patch.explanation}</p>
+      <DiffView diff={patch.diff} />
+      {patch.verification && <p className="muted small">{patch.verification.message}</p>}
+      {patch.notes.map((note) => <p key={note} className="patch-note small">Note: {note}</p>)}
+      <div className="fix-actions">
+        <button type="button" className="primary" disabled={applied} onClick={() => onApply(patch.patched_source)}>
+          {applied ? 'Patch applied below' : 'Apply patch to the editor'}
+        </button>
+        <button type="button" onClick={copy}>{copied ? 'Copied' : 'Copy patch'}</button>
+        <button type="button" onClick={() => downloadDiff(finding, patch.diff)}>Download .diff</button>
+      </div>
+    </div>
+  )
+}
+
 /** Edit the file in place and re-scan it, then say whether this kind of issue is gone. */
 function FixEditor({ finding, onFixed, saving }) {
   const catalog = useCatalog()
@@ -125,9 +195,11 @@ function FixEditor({ finding, onFixed, saving }) {
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [suggestion, setSuggestion] = useState(null)
 
   useEffect(() => {
     setResult(null)
+    setSuggestion(null)
     api.source(finding.scan_id, finding.file)
       .then((text) => { setCode(text); setOriginal(text) })
       .catch((e) => setError(`Could not load the file: ${e.message}`))
@@ -146,12 +218,15 @@ function FixEditor({ finding, onFixed, saving }) {
   }
 
   if (code === null) return error ? <ErrorBox error={error} /> : <Spinner label="Loading the file" />
+  const applied = suggestion !== null && code === suggestion
   const same = result?.findings.filter((f) => f.cwe === finding.cwe) ?? []
   const serious = same.filter((f) => f.severity >= 7)
   const kind = cweTitle(catalog, finding.cwe)
 
   return (
     <div className="fix-editor">
+      <SuggestedPatch finding={finding} applied={applied}
+                      onApply={(text) => { setSuggestion(text); setCode(text); setResult(null) }} />
       <label className="muted small" htmlFor="fix-code">
         {finding.file}, editable copy (line {finding.line} is the problem)
       </label>
@@ -261,8 +336,8 @@ export default function FindingView({ findingId }) {
         <p className="fix">{finding.fix_suggestion}</p>
         <ol className="next-steps">
           <li>
-            Edit the code below. The problem is on <strong>line {finding.line}</strong> of{' '}
-            <span className="mono">{finding.file}</span>.
+            Apply Kavach's suggested patch, or edit the code below yourself. The problem is on{' '}
+            <strong>line {finding.line}</strong> of <span className="mono">{finding.file}</span>.
           </li>
           <li>Click <strong>Re-scan my changes</strong> to check the fix.</li>
           <li>
@@ -279,8 +354,9 @@ export default function FindingView({ findingId }) {
         </ol>
         <FixEditor finding={finding} onFixed={() => changeStatus('fixed')} saving={saving} />
         <p className="muted small">
-          Fix advice is a suggestion. Review it before applying. Edits here are only re-scanned; copy the
-          fixed code back into your own file.
+          Patches and advice are suggestions: review them before use. Edits here are only re-scanned; copy
+          the fixed code back into your own file, or run <span className="mono">git apply</span> on the
+          downloaded .diff from your project folder.
         </p>
       </section>
 

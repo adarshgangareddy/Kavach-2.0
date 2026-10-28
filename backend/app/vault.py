@@ -148,6 +148,13 @@ def read_file(scan_id: str, rel: str, settings: Settings) -> str | None:
             return None
 
 
+def read_sources(scan_id: str, settings: Settings) -> dict[str, str]:
+    """Every stored Python file, decrypted in memory: {relative/path.py: text}."""
+    with _open(scan_id, settings) as zf:
+        return {name: zf.read(name).decode("utf-8", errors="replace")
+                for name in zf.namelist() if name.endswith(".py")}
+
+
 def seal_existing(settings: Settings) -> int:
     """Encrypt workspaces left in plaintext (scans from before encryption existed)."""
     from app.service import plaintext_root

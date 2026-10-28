@@ -49,7 +49,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 ## L4 Verification and mitigation: "Prove it, then fix it"
 
 - [x] ✅ **Confidence tiers:** `pattern-match` and `reachable` assigned; findings never dropped
-- [ ] 🟡 **Patch suggester:** written fix guidance per bug type; no code diff yet
+- [x] ✅ **Patch suggester:** code diffs for CWE-89 (placeholders + parameters; +, f-string, %, .format, query in a variable; sqlite3 `?` / psycopg `%s`), CWE-78 (argument list, no shell; os.system → subprocess.run; refuses shell features and user-chosen programs) and CWE-22 (`_kavach_safe_path` helper, registered as a sanitizer). Each patch is re-checked by tracing the whole project in memory; dashboard shows the diff with Apply / Copy / Download .diff (`git apply`). All 13 seeded bugs get a patch confirmed fixed
 - [ ] 👥 **Proof runner:** harmless marker test in Docker with no network, against the team's own targets
 - [ ] ⬜ **Patch re-test:** apply the suggested fix to a copy and re-run the proof (depends on the proof runner)
 

@@ -61,6 +61,7 @@ export const api = {
   deleteScan: (id) => request(`/scans/${id}`, { method: 'DELETE' }),
   findings: (id) => json(`/scans/${id}/findings`),
   finding: (id) => json(`/findings/${id}`),
+  patch: (id) => json(`/findings/${id}/patch`),
   setStatus: (id, status) =>
     json(`/findings/${id}`, {
       method: 'PATCH',

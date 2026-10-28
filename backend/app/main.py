@@ -12,6 +12,7 @@ import secrets
 import shutil
 import sqlite3
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
@@ -28,6 +29,8 @@ from app import __version__, auth, service, vault
 from app.auth import User
 from app.config import Settings, get_settings
 from app.detect.registry import all_detectors
+from app.fix.patch import suggest_patch
+from app.fix.verify import verify
 from app.ingest import IngestError, github, upload
 from app.ingest.snippet import write_snippet
 from app.ingest.workspace import fresh_workspace, resolve_source_file, workspace_for
@@ -325,6 +328,26 @@ def get_finding(finding_id: FindingId, store: StoreDep, user: CurrentUser) -> Fi
     if finding is None:
         raise HTTPException(404, "Finding not found")
     return finding
+
+
+@app.get("/findings/{finding_id}/patch")
+def finding_patch(finding_id: FindingId, store: StoreDep, settings: SettingsDep, user: CurrentUser) -> dict:
+    """A suggested code change for this finding, checked by re-tracing the whole project in memory."""
+    finding = store.get_finding(finding_id, owner_id=user.id)
+    if finding is None:
+        raise HTTPException(404, "Finding not found")
+    if not vault.is_sealed(finding.scan_id, settings):
+        raise HTTPException(409, "The scan is still running; try again when it has finished")
+    try:
+        sources = vault.read_sources(finding.scan_id, settings)
+    except vault.VaultError as exc:
+        raise HTTPException(409, f"Source unavailable: {exc}") from exc
+    if finding.file not in sources:
+        raise HTTPException(404, "File not found in this scan")
+    patch = suggest_patch(sources[finding.file], finding.file, finding.line, finding.cwe)
+    checked = (verify(sources, finding.file, patch.patched_source, finding.cwe, patch.changed_lines)
+               if patch.available else None)
+    return asdict(patch) | {"verification": asdict(checked) if checked else None}
 
 
 @app.patch("/findings/{finding_id}", response_model=Finding)

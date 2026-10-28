@@ -396,3 +396,20 @@ button.danger.solid:hover:not(:disabled) { background: var(--critical); filter: 
   white-space: nowrap; }
 .alerts-table th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
 .alerts-table .sample { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+/* Suggested patch */
+.patch-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; margin: 0 0 16px;
+  background: var(--surface-2); }
+.patch-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.patch-box .check { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid; }
+.check.ok { color: var(--ok); }
+.check.warn { color: var(--warn); }
+.check.neutral { color: var(--muted); }
+.patch-note { color: var(--warn); margin: 4px 0; }
+.patch-none { margin: 0 0 12px; }
+.diff { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 0;
+  overflow-x: auto; margin: 8px 0; }
+.diff > div { padding: 0 12px; white-space: pre; min-height: 1.4em; }
+.diff .add { background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.diff .del { background: color-mix(in srgb, var(--critical) 12%, transparent); }
+.diff .hunk { color: var(--muted); }

@@ -59,7 +59,8 @@ id = "path-traversal"
 cwe = "CWE-22"
 # Only the path counts, not the mode or encoding.
 sinks = [{ call = "open", args = [0], kwargs = ["file"] }]
-sanitizers = ["secure_filename", "werkzeug.utils.secure_filename"]
+# _kavach_safe_path: the helper the patch suggester adds (app/fix/patch.py).
+sanitizers = ["secure_filename", "werkzeug.utils.secure_filename", "_kavach_safe_path", "*._kavach_safe_path"]
 
 [[rule]]
 id = "unsafe-deserialization"
