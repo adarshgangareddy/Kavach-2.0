@@ -3,10 +3,32 @@ import { api } from '../api.js'
 import { ErrorBox, Spinner } from '../components.jsx'
 
 const TABS = [
-  { id: 'zip', label: 'Upload zip' },
-  { id: 'github', label: 'GitHub URL' },
+  { id: 'zip', label: 'Upload a zip' },
+  { id: 'github', label: 'GitHub link' },
   { id: 'snippet', label: 'Paste code' },
 ]
+
+const STEPS = [
+  { n: 1, title: 'Add your code', text: 'Upload a zip, paste a GitHub link, or paste one function.' },
+  { n: 2, title: 'Review the issues', text: 'Most serious first, each with where it is and why it matters.' },
+  { n: 3, title: 'Fix and re-check', text: 'Follow the fix advice, scan again, and mark the issue fixed.' },
+]
+
+function Steps() {
+  return (
+    <ol className="steps" aria-label="How it works">
+      {STEPS.map((s) => (
+        <li key={s.n}>
+          <span className="step-n">{s.n}</span>
+          <div>
+            <strong>{s.title}</strong>
+            <p className="muted small">{s.text}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  )
+}
 
 function ScanForm() {
   const [tab, setTab] = useState('zip')
@@ -34,11 +56,15 @@ function ScanForm() {
   }
 
   const ready = (tab === 'zip' && file) || (tab === 'github' && url.trim()) || (tab === 'snippet' && code.trim())
+  const hint = {
+    zip: 'A .zip of a Python / Flask project, up to 50 MB. Tests, virtualenvs and vendored code are skipped.',
+    github: 'A public repository, e.g. https://github.com/owner/repo.',
+    snippet: 'One route or function. Good for checking a fix quickly.',
+  }[tab]
 
   return (
     <section className="card">
-      <h2>New scan</h2>
-      <p className="muted">Python / Flask projects. Zip up to 50 MB; tests, virtualenvs and vendored code are skipped.</p>
+      <h2>Step 1 · Add your code</h2>
       <div className="tabs" role="tablist">
         {TABS.map((t) => (
           <button key={t.id} type="button" role="tab" aria-selected={tab === t.id}
@@ -48,11 +74,12 @@ function ScanForm() {
         ))}
       </div>
       <form onSubmit={submit} className="scan-form">
+        <p className="muted small">{hint}</p>
         {tab === 'zip' && (
           <label className="dropzone">
             <input type="file" accept=".zip,application/zip"
                    onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            <span>{file ? `${file.name} (${(file.size / 1024).toFixed(0)} KB)` : 'Choose a .zip file'}</span>
+            <span>{file ? `${file.name} (${(file.size / 1024).toFixed(0)} KB)` : 'Click to choose a .zip file'}</span>
           </label>
         )}
         {tab === 'github' && (
@@ -65,10 +92,22 @@ function ScanForm() {
         )}
         <ErrorBox error={error} />
         <button type="submit" className="primary" disabled={!ready || busy}>
-          {busy ? 'Starting…' : 'Start scan'}
+          {busy ? 'Scanning…' : 'Scan for security issues'}
         </button>
       </form>
     </section>
+  )
+}
+
+function countBadge(s) {
+  const serious = (s.severity_counts.critical ?? 0) + (s.severity_counts.high ?? 0)
+  if (s.status !== 'done') return <span className={`pill scan-${s.status}`}>{s.status}</span>
+  if (s.finding_count === 0) return <span className="pill status-fixed">no issues</span>
+  return (
+    <span className="pills">
+      <span className="pill status-open">{s.finding_count} issues</span>
+      {serious > 0 && <span className="pill sev-high">{serious} serious</span>}
+    </span>
   )
 }
 
@@ -81,35 +120,27 @@ function ScanList() {
 
   return (
     <section className="card">
-      <h2>Recent scans</h2>
+      <h2>Your scans</h2>
       <ErrorBox error={error} />
       {scans === null && !error && <Spinner />}
-      {scans?.length === 0 && <p className="muted">No scans yet.</p>}
+      {scans?.length === 0 && <p className="muted">No scans yet. Add some code above to start.</p>}
       {scans?.length > 0 && (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Scan</th><th>Source</th><th>Status</th><th>Files</th><th>Findings</th><th>Started</th></tr>
-            </thead>
-            <tbody>
-              {scans.map((s) => (
-                <tr key={s.id} className="clickable" onClick={() => (window.location.hash = `#/scans/${s.id}`)}>
-                  <td><a href={`#/scans/${s.id}`}>{s.id}</a></td>
-                  <td className="truncate" title={s.source_ref}>{s.source_kind}: {s.source_ref}</td>
-                  <td><span className={`pill scan-${s.status}`}>{s.status}</span></td>
-                  <td>{s.files_scanned}</td>
-                  <td>
-                    {s.finding_count}
-                    {(s.severity_counts.critical || s.severity_counts.high) ? (
-                      <span className="pill sev-high small">{(s.severity_counts.critical ?? 0) + (s.severity_counts.high ?? 0)} high+</span>
-                    ) : null}
-                  </td>
-                  <td>{new Date(s.created_at * 1000).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="scan-list">
+          {scans.map((s) => (
+            <li key={s.id}>
+              <a href={`#/scans/${s.id}`} className="scan-row">
+                <span className="scan-name">
+                  <strong className="truncate">{s.source_ref}</strong>
+                  <span className="muted small">
+                    {s.source_kind} · {s.files_scanned} files · {new Date(s.created_at * 1000).toLocaleString()}
+                  </span>
+                </span>
+                {countBadge(s)}
+                <span className="chev" aria-hidden="true">›</span>
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   )
@@ -118,6 +149,14 @@ function ScanList() {
 export default function Home() {
   return (
     <>
+      <section className="hero">
+        <h1>Find security bugs in your Flask app</h1>
+        <p className="muted">
+          ZeroDay Sentinel follows user input through your code, including your own helper functions,
+          and shows where it reaches something dangerous.
+        </p>
+        <Steps />
+      </section>
       <ScanForm />
       <ScanList />
     </>

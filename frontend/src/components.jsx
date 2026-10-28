@@ -52,6 +52,21 @@ export function BarChart({ title, rows, onSelect, selected }) {
   )
 }
 
+/** One plain-English sentence: what the finding means. */
+export function plainSummary(f) {
+  const steps = f.path.slice(0, -1)
+  if (f.source && steps.length) {
+    const via = steps.length > 1 ? ` through ${steps.slice(1).join(' → ')}` : ` in ${steps[0]}`
+    const start = f.source.includes('(') ? `${f.source}` : `${f.source} (user input)`
+    const clean = f.severity_factors.sanitizer_present < 0
+      ? ' A cleaning function is on the path, so it is probably safe: check it.'
+      : ' Nothing cleans it on the way.'
+    return `Data from ${start} reaches ${f.sink}${via}.${clean}`
+  }
+  return `${f.detector} flagged a risky pattern on this line (${f.sink}). ` +
+    'It has not been shown that user input reaches it.'
+}
+
 export function severityRows(findings) {
   const counts = Object.fromEntries(SEVERITY_ORDER.map((s) => [s, 0]))
   findings.forEach((f) => counts[severityLabel(f.severity)]++)

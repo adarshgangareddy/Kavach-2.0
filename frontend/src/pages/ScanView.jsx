@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { api, severityLabel, STATUSES } from '../api.js'
+import { api, severityLabel, SEVERITY_ORDER, STATUSES } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
-import { BarChart, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, severityRows } from '../components.jsx'
+import { BarChart, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary, severityRows } from '../components.jsx'
 
 const POLL_MS = 1000
 
@@ -34,40 +34,51 @@ function useScan(scanId) {
   return { scan, findings, error }
 }
 
-function Filters({ filters, setFilters, cwes }) {
-  const set = (key) => (e) => setFilters({ ...filters, [key]: e.target.value })
-  return (
-    <div className="filters">
-      <input type="search" placeholder="Search file, sink, source…" value={filters.q}
-             onChange={set('q')} aria-label="Search findings" />
-      <select value={filters.status} onChange={set('status')} aria-label="Status">
-        <option value="">All statuses</option>
-        {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-      </select>
-      <select value={filters.cwe} onChange={set('cwe')} aria-label="CWE">
-        <option value="">All CWEs</option>
-        {cwes.map((c) => <option key={c} value={c}>{c}</option>)}
-      </select>
-      <label className="range">
-        Min severity <strong>{Number(filters.min).toFixed(1)}</strong>
-        <input type="range" min="0" max="10" step="0.5" value={filters.min} onChange={set('min')} />
-      </label>
-    </div>
-  )
-}
+const EMPTY_FILTERS = { q: '', status: 'open', severity: '' }
 
 function applyFilters(findings, f) {
   const q = f.q.trim().toLowerCase()
   return findings.filter((x) =>
     (!f.status || x.status === f.status) &&
-    (!f.cwe || x.cwe === f.cwe) &&
     (!f.severity || severityLabel(x.severity) === f.severity) &&
-    x.severity >= Number(f.min) &&
     (!q || [x.file, x.sink, x.source, x.detector, x.cwe].some((v) => v?.toLowerCase().includes(q))),
   )
 }
 
-const EMPTY_FILTERS = { q: '', status: '', cwe: '', severity: '', min: 0 }
+function SeverityChips({ findings, selected, onSelect }) {
+  const counts = Object.fromEntries(SEVERITY_ORDER.map((s) => [s, 0]))
+  findings.forEach((f) => counts[severityLabel(f.severity)]++)
+  return (
+    <div className="chips" role="group" aria-label="Filter by severity">
+      {SEVERITY_ORDER.filter((s) => counts[s]).map((s) => (
+        <button key={s} type="button" aria-pressed={selected === s}
+                className={`chip sev-${s} ${selected === s ? 'on' : ''}`}
+                onClick={() => onSelect(selected === s ? '' : s)}>
+          <strong>{counts[s]}</strong> {s}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FindingCard({ f, catalog }) {
+  return (
+    <li>
+      <a href={`#/findings/${f.id}`} className="finding-card">
+        <SeverityPill score={f.severity} />
+        <span className="finding-main">
+          <strong>{cweTitle(catalog, f.cwe)}</strong>
+          <span className="mono small">{f.file}:{f.line}</span>
+          <span className="muted small">{plainSummary(f)}</span>
+        </span>
+        <span className="finding-side">
+          {f.status !== 'open' && <StatusPill status={f.status} />}
+          <span className="chev" aria-hidden="true">›</span>
+        </span>
+      </a>
+    </li>
+  )
+}
 
 export default function ScanView({ scanId }) {
   const { scan, findings, error } = useScan(scanId)
@@ -88,83 +99,101 @@ export default function ScanView({ scanId }) {
   if (error) return <ErrorBox error={error} />
   if (!scan) return <Spinner />
 
+  const open = findings?.filter((f) => f.status === 'open') ?? []
+  const blocking = open.filter((f) => f.severity >= 7).length
+
   return (
     <>
-      <nav className="crumbs"><a href="#/">Scans</a> / {scan.id}</nav>
-      <section className="card scan-head">
-        <div>
-          <h2>{scan.source_kind}: <span className="mono">{scan.source_ref}</span></h2>
-          <p className="muted">
-            <span className={`pill scan-${scan.status}`}>{scan.status}</span>{' '}
-            {scan.files_scanned} files · detectors: {scan.detectors.join(', ') || 'none'}
-            {scan.finished_at && ` · ${(scan.finished_at - scan.created_at).toFixed(1)}s`}
-          </p>
-        </div>
-        {scan.status === 'done' && (
-          <div className="exports">
-            {['json', 'pdf', 'sarif'].map((k) => (
-              <a key={k} className="button" href={api.exportUrl(scan.id, k)} download>{k.toUpperCase()}</a>
-            ))}
+      <nav className="crumbs"><a href="#/">Your scans</a> / {scan.source_ref}</nav>
+
+      <section className="card summary">
+        <div className="summary-head">
+          <div>
+            <p className="eyebrow">Step 2 · Review the issues</p>
+            <h1 className="truncate">{scan.source_ref}</h1>
+            <p className="muted small">
+              <span className={`pill scan-${scan.status}`}>{scan.status}</span>{' '}
+              {scan.files_scanned} files · checked by {scan.detectors.join(', ') || 'no detectors'}
+              {scan.finished_at && ` · ${(scan.finished_at - scan.created_at).toFixed(1)}s`}
+            </p>
           </div>
+          {scan.status === 'done' && (
+            <div className="exports" aria-label="Download report">
+              <span className="muted small">Download:</span>
+              {['pdf', 'json', 'sarif'].map((k) => (
+                <a key={k} className="button" href={api.exportUrl(scan.id, k)} download>{k.toUpperCase()}</a>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {scan.error && <ErrorBox error={scan.error} />}
+        {!findings && scan.status !== 'failed' && <Spinner label="Scanning" />}
+        {findings && (
+          findings.length === 0 ? (
+            <p className="verdict ok">No security issues found.</p>
+          ) : (
+            <>
+              <p className={`verdict ${blocking ? 'bad' : 'ok'}`}>
+                {open.length} open {open.length === 1 ? 'issue' : 'issues'}
+                {blocking > 0 ? `, ${blocking} serious enough to block a commit (severity 7+).` : ', none serious enough to block a commit.'}
+              </p>
+              <SeverityChips findings={open} selected={filters.severity}
+                             onSelect={(v) => setFilters({ ...filters, severity: v })} />
+            </>
+          )
         )}
       </section>
 
-      {scan.error && <ErrorBox error={scan.error} />}
-      {scan.notes.length > 0 && (
-        <details className="card notes" open={scan.finding_count === 0}>
-          <summary>Scan notes ({scan.notes.length})</summary>
-          <ul>{scan.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
-        </details>
-      )}
-      {!findings && scan.status !== 'failed' && <Spinner label="Scanning" />}
-
-      {findings && (
-        <>
-          <div className="grid charts">
-            <BarChart title="By severity" rows={severityRows(findings)} selected={filters.severity}
-                      onSelect={(v) => setFilters({ ...filters, severity: v })} />
-            <BarChart title="By CWE" rows={cweRows} selected={filters.cwe}
-                      onSelect={(v) => setFilters({ ...filters, cwe: v })} />
-            <BarChart title="By status" rows={statusRows} selected={filters.status}
-                      onSelect={(v) => setFilters({ ...filters, status: v })} />
-          </div>
-
-          <section className="card">
-            <div className="section-head">
-              <h2>Findings <span className="muted">({visible.length} of {findings.length})</span></h2>
-              {JSON.stringify(filters) !== JSON.stringify(EMPTY_FILTERS) && (
-                <button type="button" className="link" onClick={() => setFilters(EMPTY_FILTERS)}>Clear filters</button>
-              )}
+      {findings && findings.length > 0 && (
+        <section className="card">
+          <div className="section-head">
+            <h2>Issues <span className="muted">({visible.length})</span></h2>
+            <div className="filters-inline">
+              <input type="search" placeholder="Search file or call…" value={filters.q}
+                     onChange={(e) => setFilters({ ...filters, q: e.target.value })} aria-label="Search issues" />
+              <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                      aria-label="Show">
+                <option value="open">Open</option>
+                <option value="fixed">Fixed</option>
+                <option value="accepted">Accepted risk</option>
+                <option value="">All</option>
+              </select>
             </div>
-            <Filters filters={filters} setFilters={setFilters} cwes={cweRows.map((r) => r.key)} />
-            {visible.length === 0 ? (
-              <p className="muted">No findings match.</p>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr><th>Severity</th><th>Issue</th><th>Location</th><th>Confidence</th><th>Detector</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((f) => (
-                      <tr key={f.id} className="clickable" onClick={() => (window.location.hash = `#/findings/${f.id}`)}>
-                        <td><SeverityPill score={f.severity} /></td>
-                        <td>
-                          <a href={`#/findings/${f.id}`}>{cweTitle(catalog, f.cwe)}</a>
-                          <div className="muted small">{f.cwe} · {f.owasp}</div>
-                        </td>
-                        <td className="mono truncate" title={`${f.file}:${f.line}`}>{f.file}:{f.line}</td>
-                        <td><TierPill tier={f.confidence_tier} /></td>
-                        <td className="small">{f.detector}</td>
-                        <td><StatusPill status={f.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        </>
+          </div>
+          <p className="muted small">Most serious first. Click an issue to see where it is and how to fix it.</p>
+          {visible.length === 0 ? (
+            <p className="muted">No issues match.{' '}
+              <button type="button" className="link" onClick={() => setFilters(EMPTY_FILTERS)}>Show open issues</button>
+            </p>
+          ) : (
+            <ul className="finding-list">
+              {visible.map((f) => <FindingCard key={f.id} f={f} catalog={catalog} />)}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {findings && findings.length > 0 && (
+        <details className="card more">
+          <summary>Charts and scan details</summary>
+          <div className="grid charts">
+            <BarChart title="By severity" rows={severityRows(findings)} />
+            <BarChart title="By weakness (CWE)" rows={cweRows} />
+            <BarChart title="By status" rows={statusRows} />
+          </div>
+          {scan.notes.length > 0 && (
+            <>
+              <h3>Scan notes</h3>
+              <ul className="notes-list">{scan.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+            </>
+          )}
+          <h3>Confidence levels</h3>
+          <ul className="notes-list">
+            <li><TierPill tier="reachable" /> a path from user input to the risky call was traced.</li>
+            <li><TierPill tier="pattern-match" /> a risky pattern only; not shown to be reachable.</li>
+          </ul>
+        </details>
       )}
     </>
   )

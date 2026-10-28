@@ -66,7 +66,10 @@ export default function App() {
           </svg>
           ZeroDay Sentinel
         </a>
-        <DetectorBadge />
+        <nav className="topnav">
+          <a href="#/" className="button primary small-button">+ New scan</a>
+          <DetectorBadge />
+        </nav>
       </header>
       <main className="container">{page}</main>
     </CatalogContext.Provider>
