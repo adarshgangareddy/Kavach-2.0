@@ -34,13 +34,33 @@ function useScan(scanId) {
   return { scan, findings, error }
 }
 
-const EMPTY_FILTERS = { q: '', status: 'open', severity: '' }
+const EMPTY_FILTERS = { q: '', status: 'open', severity: '', found: '' }
+const BASELINES = ['bandit', 'semgrep']
+
+/** Which tools reported a finding. Merged findings list every detector, e.g. "bandit+taint-wrapper". */
+function foundBy(f) {
+  const parts = f.detector.split('+')
+  return {
+    kavach: parts.some((d) => d.startsWith('taint')),
+    bandit: parts.includes('bandit'),
+    semgrep: parts.includes('semgrep'),
+  }
+}
+
+/** 'kavach-only' | 'both' | 'others-only' */
+function foundGroup(f) {
+  const by = foundBy(f)
+  const others = by.bandit || by.semgrep
+  if (by.kavach && !others) return 'kavach-only'
+  return by.kavach ? 'both' : 'others-only'
+}
 
 function applyFilters(findings, f) {
   const q = f.q.trim().toLowerCase()
   return findings.filter((x) =>
     (!f.status || x.status === f.status) &&
     (!f.severity || severityLabel(x.severity) === f.severity) &&
+    (!f.found || foundGroup(x) === f.found) &&
     (!q || [x.file, x.sink, x.source, x.detector, x.cwe].some((v) => v?.toLowerCase().includes(q))),
   )
 }
@@ -61,13 +81,61 @@ function SeverityChips({ findings, selected, onSelect }) {
   )
 }
 
+const GROUPS = [
+  { id: 'kavach-only', title: 'Only Kavach found', note: 'missed by the pattern tools', accent: true },
+  { id: 'both', title: 'Kavach and others', note: 'found by more than one tool' },
+  { id: 'others-only', title: 'Only Bandit or Semgrep', note: 'risky patterns, no traced path' },
+]
+
+/** Head-to-head on this scan: what Kavach found that the baseline tools did not. */
+function ToolComparison({ scan, findings, selected, onSelect }) {
+  const ran = BASELINES.filter((b) => scan.detectors.includes(b))
+  if (!scan.detectors.includes('taint') || ran.length === 0 || findings.length === 0) return null
+  const counts = { 'kavach-only': 0, both: 0, 'others-only': 0 }
+  const perTool = { kavach: 0, bandit: 0, semgrep: 0 }
+  findings.forEach((f) => {
+    counts[foundGroup(f)]++
+    const by = foundBy(f)
+    Object.keys(perTool).forEach((t) => { if (by[t]) perTool[t]++ })
+  })
+  const others = ran.map((b) => b[0].toUpperCase() + b.slice(1)).join(' and ')
+  return (
+    <div className="compare" aria-label="Kavach compared with other tools on this scan">
+      <p className="compare-lead">
+        {counts['kavach-only'] > 0
+          ? <><strong>{counts['kavach-only']}</strong> {counts['kavach-only'] === 1 ? 'issue' : 'issues'} found only by Kavach, missed by {others}.</>
+          : <>Kavach found nothing extra on this scan; every issue was also found by {others}.</>}
+      </p>
+      <div className="compare-groups" role="group" aria-label="Filter by which tools found an issue">
+        {GROUPS.map((g) => (
+          <button key={g.id} type="button" aria-pressed={selected === g.id} disabled={!counts[g.id]}
+                  className={`compare-group ${g.accent ? 'accent' : ''} ${selected === g.id ? 'on' : ''}`}
+                  onClick={() => onSelect(selected === g.id ? '' : g.id)}>
+            <span className="compare-count">{counts[g.id]}</span>
+            <span className="compare-title">{g.title}</span>
+            <span className="muted small">{g.note}</span>
+          </button>
+        ))}
+      </div>
+      <p className="muted small">
+        Issues each tool reported here: Kavach {perTool.kavach}
+        {ran.map((b) => ` · ${b[0].toUpperCase() + b.slice(1)} ${perTool[b]}`).join('')}.
+        Click a group to show just those issues.
+      </p>
+    </div>
+  )
+}
+
 function FindingCard({ f, catalog }) {
   return (
     <li>
       <a href={`#/findings/${f.id}`} className="finding-card">
         <SeverityPill score={f.severity} />
         <span className="finding-main">
-          <strong>{cweTitle(catalog, f.cwe)}</strong>
+          <strong>
+            {cweTitle(catalog, f.cwe)}
+            {foundGroup(f) === 'kavach-only' && <span className="pill only-kavach">Only Kavach</span>}
+          </strong>
           <span className="mono small">{f.file}:{f.line}</span>
           <span className="muted small">{plainSummary(f)}</span>
         </span>
@@ -148,6 +216,8 @@ export default function ScanView({ scanId }) {
               </p>
               <SeverityChips findings={open} selected={filters.severity}
                              onSelect={(v) => setFilters({ ...filters, severity: v })} />
+              <ToolComparison scan={scan} findings={findings} selected={filters.found}
+                              onSelect={(v) => setFilters({ ...filters, found: v, status: v ? '' : filters.status })} />
             </>
           )
         )}

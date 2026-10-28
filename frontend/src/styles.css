@@ -363,3 +363,21 @@ button.danger.solid:hover:not(:disabled) { background: var(--critical); filter: 
 .scan-item { flex-wrap: wrap; }
 .scan-item .scan-row { flex: 1 1 320px; }
 .scan-item .delete-scan { margin-left: auto; }
+
+/* Found only by Kavach */
+.compare { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.compare-lead { margin: 0 0 10px; font-size: 15px; }
+.compare-lead strong { color: var(--accent); font-size: 18px; }
+.compare-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.compare-group {
+  display: grid; gap: 2px; justify-items: start; text-align: left; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2);
+}
+.compare-group.accent { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.compare-group.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.compare-group:disabled { opacity: .5; }
+.compare-count { font-size: 22px; font-weight: 700; line-height: 1.1; }
+.compare-group.accent .compare-count { color: var(--accent); }
+.compare-title { font-weight: 600; font-size: 13px; }
+.pill.only-kavach { margin-left: 8px; color: var(--accent); font-size: 11px; vertical-align: 2px; }
+@media (max-width: 640px) { .compare-groups { grid-template-columns: 1fr; } }
