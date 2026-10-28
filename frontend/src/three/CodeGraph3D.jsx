@@ -26,8 +26,8 @@ function usePointer() {
   return pointer
 }
 
-function Graph({ graph, onSlow }) {
-  useFpsGuard(onSlow)
+function Graph({ graph, onSlow, active }) {
+  useFpsGuard(onSlow, { enabled: active })
   const pointer = usePointer()
   const spin = useRef()
   const tilt = useRef()
@@ -139,7 +139,7 @@ export default function CodeGraph3D({ distance = 7.5 }) {
                 lost.current = () => gl.domElement.removeEventListener('webglcontextlost', onLost)
               }}>
         <WakeOnChange value={visible} />
-        <Graph graph={graph} onSlow={() => disable3D('slow')} />
+        <Graph graph={graph} onSlow={() => disable3D('slow')} active={visible} />
       </Canvas>
     </div>
   )

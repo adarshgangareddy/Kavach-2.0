@@ -112,3 +112,31 @@ describe('Safe3D', () => {
     expect(screen.getByTestId('code-graph-2d')).toBeTruthy()
   })
 })
+
+describe('3D paused', () => {
+  it('says why 3D switched off by itself, and one click brings it back', async () => {
+    let effects
+    const Probe = () => { effects = useEffects(); return null }
+    render(
+      <EffectsProvider detectWebGL={() => true}>
+        <Probe />
+        <ReduceEffectsToggle />
+        <HeroBackdrop />
+      </EffectsProvider>,
+    )
+    await screen.findByTestId('code-graph-3d')
+    vi.spyOn(console, 'info').mockImplementation(() => {})
+    act(() => effects.disable3D('slow'))
+    const paused = screen.getByRole('button', { name: /3d paused/i })
+    expect(paused.title).toMatch(/under 40 frames a second/)
+    expect(screen.getByTestId('code-graph-2d')).toBeTruthy()
+    fireEvent.click(paused)
+    expect(await screen.findByTestId('code-graph-3d')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /reduce effects/i })).toBeTruthy()
+  })
+
+  it('explains a missing WebGL in the toggle tooltip', () => {
+    renderHero({ webgl: false })
+    expect(screen.getByRole('button', { name: /reduce effects/i }).title).toMatch(/cannot draw 3D/)
+  })
+})

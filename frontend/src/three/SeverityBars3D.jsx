@@ -13,8 +13,8 @@ const GROW = 0.8   // seconds for the bars to rise from zero
 
 const ease = (t) => 1 - (1 - t) ** 3
 
-function Bars({ rows, selected, hovered, onHover, onSelect, onGrown, tips, onSlow }) {
-  useFpsGuard(onSlow)
+function Bars({ rows, selected, hovered, onHover, onSelect, onGrown, tips, onSlow, growing }) {
+  useFpsGuard(onSlow, { enabled: growing })
   const max = Math.max(1, ...rows.map((r) => r.value))
   const bars = useRef([])
   const time = useRef(0)
@@ -103,7 +103,7 @@ export default function SeverityBars3D({ rows, selected, onSelect }) {
         <ambientLight intensity={0.55} />
         <directionalLight position={[3, 5, 4]} intensity={1.1} />
         <Bars rows={rows} selected={selected} hovered={hovered} onHover={setHovered} onSelect={onSelect}
-              onGrown={() => setGrowing(false)} tips={tips} onSlow={() => disable3D('slow')} />
+              onGrown={() => setGrowing(false)} tips={tips} onSlow={() => disable3D('slow')} growing={growing} />
       </Canvas>
       <div className="sevbars-tips">
         {rows.map((r, i) => (

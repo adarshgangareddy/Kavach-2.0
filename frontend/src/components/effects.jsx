@@ -45,6 +45,16 @@ function useMedia(query) {
   return matches
 }
 
+/** Why 3D is off, in words for the header button's tooltip; null when nothing global stops it. */
+const REASONS = {
+  toggle: 'You turned effects off.',
+  system: 'Your system asks for reduced motion, so 3D and motion stay off.',
+  webgl: 'This browser cannot draw 3D (WebGL is off or missing), so 2D views are shown.',
+  slow: 'A 3D view ran under 40 frames a second, so Kavach switched to 2D to stay smooth.',
+  error: 'A 3D view hit an error, so Kavach switched to 2D.',
+  'webgl-lost': 'The graphics card reset, so Kavach switched to 2D.',
+}
+
 const EffectsContext = createContext(null)
 
 /**
@@ -63,17 +73,25 @@ export function EffectsProvider({ children, detectWebGL = hasWebGL }) {
     setReduce(value)
     save(value)
   }, [])
-  const disable3D = useCallback((reason) => setDisabled((current) => current ?? reason), [])
+  const disable3D = useCallback((reason) => {
+    setDisabled((current) => {
+      if (!current) console.info(`Kavach: 3D switched to 2D (${reason}).`)
+      return current ?? reason
+    })
+  }, [])
+  const retry3D = useCallback(() => setDisabled(null), [])
 
   const motion = !reduceEffects && !prefersReduced
   useEffect(() => {
     document.documentElement.dataset.effects = motion ? 'on' : 'off'
   }, [motion])
 
+  const offReason = reduceEffects ? 'toggle' : prefersReduced ? 'system' : !webgl ? 'webgl' : disabled
   const value = useMemo(() => ({
-    reduceEffects, setReduceEffects, prefersReduced, small, webgl, disabled, disable3D, motion,
+    reduceEffects, setReduceEffects, prefersReduced, small, webgl, disabled, disable3D, retry3D, motion,
+    offReason, offMessage: offReason ? REASONS[offReason] ?? REASONS.error : null,
     allow3D: ({ allowSmall = false } = {}) => motion && webgl && !disabled && (allowSmall || !small),
-  }), [reduceEffects, setReduceEffects, prefersReduced, small, webgl, disabled, disable3D, motion])
+  }), [reduceEffects, setReduceEffects, prefersReduced, small, webgl, disabled, disable3D, retry3D, motion, offReason])
   return <EffectsContext.Provider value={value}>{children}</EffectsContext.Provider>
 }
 

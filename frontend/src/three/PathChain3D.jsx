@@ -49,7 +49,7 @@ function FitCamera({ count }) {
 }
 
 function Chain({ chain, points, selected, onSelect, playing, onPlayed, labels, onSlow }) {
-  useFpsGuard(onSlow)
+  useFpsGuard(onSlow, { enabled: playing })
   useLabels(points, labels)
   const group = useRef()
   const particle = useRef()

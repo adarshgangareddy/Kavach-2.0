@@ -548,3 +548,5 @@ img, svg, canvas { max-width: 100%; }
   .shield-lock.animate *, .shield-lock.animate { animation: none !important; opacity: 1 !important;
     transform: none !important; stroke-dashoffset: 0 !important; }
 }
+.effects-toggle.paused { border-color: rgba(245, 158, 11, 0.55); }
+.effects-toggle.paused .effects-dot { background: var(--warn); box-shadow: 0 0 8px var(--warn); }

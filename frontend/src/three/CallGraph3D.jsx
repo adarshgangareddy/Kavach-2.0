@@ -26,8 +26,8 @@ function useLines(edgeCount) {
 }
 
 /** While the scan runs: a graph grows node by node. It shows work in progress, not real results. */
-function Building({ onSlow }) {
-  useFpsGuard(onSlow)
+function Building({ onSlow, active }) {
+  useFpsGuard(onSlow, { enabled: active })
   const graph = useMemo(() => makeGraph({ count: 40, risky: 0, seed: 11 }), [])
   const edges = useMemo(() => [...graph.edges].sort((a, b) => Math.max(...a) - Math.max(...b)), [graph])
   const lines = useLines(edges.length)
@@ -81,8 +81,8 @@ function along(points, t) {
 }
 
 /** The real call graph: nodes appear by depth, then tainted data runs from each source to its sink. */
-function Result({ graph, onSlow, onDone }) {
-  useFpsGuard(onSlow)
+function Result({ graph, onSlow, onDone, active }) {
+  useFpsGuard(onSlow, { enabled: active })
   const layout = useMemo(() => layoutCallGraph(graph), [graph])
   const byKind = useMemo(() => ({
     source: graph.nodes.filter((n) => n.kind === 'source'),
@@ -209,8 +209,8 @@ export default function CallGraph3D({ mode, graph }) {
               gl={{ antialias: true, alpha: true }}>
         <WakeOnChange value={loop} />
         {mode === 'building'
-          ? <Building onSlow={onSlow} />
-          : <Result graph={graph} onSlow={onSlow} onDone={() => setAnimating(false)} />}
+          ? <Building onSlow={onSlow} active={visible} />
+          : <Result graph={graph} onSlow={onSlow} onDone={() => setAnimating(false)} active={animating && visible} />}
       </Canvas>
     </div>
   )
