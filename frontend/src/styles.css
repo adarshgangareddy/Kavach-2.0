@@ -472,3 +472,26 @@ img, svg, canvas { max-width: 100%; }
 .chain-inline .source code { color: var(--accent); }
 .chain-inline .sink code { color: var(--critical); }
 @media (max-width: 640px) { .callgraph-stage { height: 240px; } }
+
+/* --- Finding page: the path as a 3D chain ------------------------------------------- */
+.pathchain-stage { position: relative; height: 230px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.06), transparent 70%), var(--code-bg);
+  overflow: hidden; margin-bottom: 8px; }
+.pathchain-3d { position: absolute; inset: 0; }
+.pathchain-labels { position: absolute; inset: 0; pointer-events: none; }
+.pathchain-label { position: absolute; left: 0; top: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; font: 11.5px var(--font-mono); color: var(--text); padding: 1px 6px; border-radius: 6px;
+  background: rgba(7, 10, 18, 0.75); border: 1px solid var(--border); }
+.pathchain-label.source { color: var(--accent); }
+.pathchain-label.sink { color: var(--critical); }
+.pathchain-label.selected { border-color: var(--accent); box-shadow: 0 0 10px rgba(34, 211, 238, 0.35); }
+.pathflow-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.step-button { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 0; max-width: 100%;
+  padding: 4px 8px; text-align: left; background: transparent; }
+.step-button code { overflow-wrap: anywhere; }
+.step-button.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15); }
+.code .focus { background: rgba(34, 211, 238, 0.12); box-shadow: inset 3px 0 0 var(--accent); }
+/* Grid and flex children default to min-width: auto and stretch to fit long code lines;
+   let them shrink so code scrolls inside its own box instead of widening the page. */
+.fix-editor > *, .patch-box, .patch-box > *, .grid > *, .finding-head > *, .pathflow > * { min-width: 0; }
+.diff { overflow-x: auto; }

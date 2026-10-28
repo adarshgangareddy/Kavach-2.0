@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
 import { ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary } from '../components.jsx'
+import PathFlow from '../components/PathFlow.jsx'
+import { chainFor } from '../components/pathLines.js'
 
 const CONTEXT_LINES = 8
 
@@ -19,46 +21,39 @@ const TIER_HELP = {
   'proof-confirmed': 'A harmless marker test confirmed the path in a sandbox.',
 }
 
-function SourceView({ scanId, file, line }) {
-  const [text, setText] = useState(null)
-  const [error, setError] = useState('')
+/** The finding's file, fetched once and shared by the code panel and the path view. */
+function useSource(scanId, file) {
+  const [source, setSource] = useState({ text: null, error: '' })
   useEffect(() => {
-    api.source(scanId, file).then(setText).catch((e) => setError(e.message))
+    setSource({ text: null, error: '' })
+    if (!scanId || !file) return
+    api.source(scanId, file).then((text) => setSource({ text, error: '' }))
+      .catch((e) => setSource({ text: null, error: e.message }))
   }, [scanId, file])
+  return source
+}
 
+/** Lines around the problem (amber); `focus` is a line picked in the path view (cyan). */
+function SourceView({ text, error, line, focus }) {
   if (error) return <p className="muted">Source unavailable: {error}</p>
   if (text === null) return <Spinner />
   const lines = text.split('\n')
-  const start = Math.max(1, line - CONTEXT_LINES)
-  const end = Math.min(lines.length, line + CONTEXT_LINES)
+  const centre = focus ?? line
+  const start = Math.max(1, Math.min(line, centre) - CONTEXT_LINES)
+  const end = Math.min(lines.length, Math.max(line, centre) + CONTEXT_LINES)
   return (
-    <pre className="code" aria-label={`${file} lines ${start} to ${end}`}>
+    <pre className="code" aria-label={`Lines ${start} to ${end}`}>
       {lines.slice(start - 1, end).map((content, i) => {
         const n = start + i
+        const cls = [n === line ? 'hl' : '', n === focus && n !== line ? 'focus' : ''].join(' ').trim()
         return (
-          <div key={n} className={n === line ? 'hl' : ''}>
+          <div key={n} className={cls} aria-current={n === focus ? 'true' : undefined}>
             <span className="ln">{n}</span>
             <span>{content || ' '}</span>
           </div>
         )
       })}
     </pre>
-  )
-}
-
-function PathChain({ finding }) {
-  const steps = finding.path.length ? finding.path : [finding.sink].filter(Boolean)
-  if (!steps.length && !finding.source) return <p className="muted">No path recorded for this finding.</p>
-  return (
-    <ol className="chain">
-      {finding.source && <li className="step source"><small>source</small><code>{finding.source}</code></li>}
-      {steps.map((step, i) => (
-        <li key={i} className={`step ${i === steps.length - 1 ? 'sink' : ''}`}>
-          <small>{i === steps.length - 1 ? 'sink' : `step ${i + 1}`}</small>
-          <code>{step}</code>
-        </li>
-      ))}
-    </ol>
   )
 }
 
@@ -332,9 +327,19 @@ export default function FindingView({ findingId }) {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const { prev, next, position } = useNeighbours(finding?.scan_id, findingId)
+  const source = useSource(finding?.scan_id, finding?.file)
+  const [step, setStep] = useState(null)  // the path step picked in the path view
+  const codePanel = useRef(null)
+  const chain = useMemo(() => (finding ? chainFor(finding, source.text) : []), [finding, source.text])
+
+  function pickStep(i) {
+    setStep(i)
+    codePanel.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
 
   useEffect(() => {
     setFinding(null)
+    setStep(null)
     api.finding(findingId).then(setFinding).catch((e) => setError(e.message))
   }, [findingId])
 
@@ -409,13 +414,13 @@ export default function FindingView({ findingId }) {
       </section>
 
       <div className="grid two">
-        <section className="card">
+        <section className="card" ref={codePanel}>
           <h2>Where in the code</h2>
-          <SourceView scanId={finding.scan_id} file={finding.file} line={finding.line} />
+          <SourceView text={source.text} error={source.error} line={finding.line} focus={chain[step]?.line ?? null} />
         </section>
         <section className="card">
           <h2>How the data gets there</h2>
-          <PathChain finding={finding} />
+          <PathFlow chain={chain} selected={step} onSelect={pickStep} />
           <p className="muted small">{TIER_HELP[finding.confidence_tier]}</p>
         </section>
       </div>
