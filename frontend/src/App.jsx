@@ -97,7 +97,7 @@ export default function App() {
             <path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="currentColor" strokeWidth="2"
                   strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          ZeroDay Sentinel
+          Kavach
         </a>
         {user && (
           <nav className="topnav">

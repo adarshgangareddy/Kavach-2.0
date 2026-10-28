@@ -1,4 +1,4 @@
-# ZeroDay Sentinel taint rules. Read by app/detect/taint.py.
+# Kavach taint rules. Read by app/detect/taint.py.
 # Override the location with SENTINEL_RULES=/path/to/rules.toml.
 #
 # Patterns are fnmatch-style call names, matched against both the name as

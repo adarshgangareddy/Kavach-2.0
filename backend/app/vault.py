@@ -127,7 +127,7 @@ def _open(scan_id: str, settings: Settings) -> zipfile.ZipFile:
     except FileNotFoundError as exc:
         raise VaultError("no encrypted workspace for this scan") from exc
     if not blob.startswith(MAGIC) or len(blob) < len(MAGIC) + NONCE_BYTES + 16:
-        raise VaultError("not a ZeroDay Sentinel archive")
+        raise VaultError("not a Kavach archive")
     nonce = blob[len(MAGIC):len(MAGIC) + NONCE_BYTES]
     try:
         data = AESGCM(load_key(settings)).decrypt(nonce, blob[len(MAGIC) + NONCE_BYTES:], _aad(scan_id))

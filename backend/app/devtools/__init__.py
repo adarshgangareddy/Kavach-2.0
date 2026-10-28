@@ -1,1 +1,1 @@
-"""Developer tooling for working on ZeroDay Sentinel itself (not part of the scanner)."""
+"""Developer tooling for working on Kavach itself (not part of the scanner)."""

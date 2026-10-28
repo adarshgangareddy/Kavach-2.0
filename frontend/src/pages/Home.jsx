@@ -162,7 +162,7 @@ export default function Home() {
       <section className="hero">
         <h1>Find security bugs in your Flask app</h1>
         <p className="muted">
-          ZeroDay Sentinel follows user input through your code, including your own helper functions,
+          Kavach follows user input through your code, including your own helper functions,
           and shows where it reaches something dangerous.
         </p>
         <Steps />

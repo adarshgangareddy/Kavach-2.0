@@ -5,7 +5,7 @@
     backend/.venv/bin/python eval/run.py --no-early # skip the commit-hook timing
 
 For every app in targets/ (see targets/README.md) it runs Bandit, default
-Semgrep and ZeroDay Sentinel, matches their findings to truth.json (same file
+Semgrep and Kavach, matches their findings to truth.json (same file
 and CWE, line within ±2), and reports caught, missed and precision, split into
 wrapper and direct bugs. It adds an ablation and early-detection numbers:
 for each app, a commit that adds the routes on top of already-committed
@@ -88,7 +88,7 @@ def default_tools() -> list[tuple[str, list]]:
     return [
         ("Bandit", [BanditDetector()]),
         (f"Semgrep ({SemgrepDetector().config} rules)", [SemgrepDetector()]),
-        ("ZeroDay Sentinel (taint)", [TaintDetector()]),
+        ("Kavach (taint)", [TaintDetector()]),
     ]
 
 
@@ -195,7 +195,7 @@ def render(apps: list[Path], tools: list[ToolScore], ablation: list[ToolScore],
     total = int(ref.total("truth")) if ref else 0
     wrappers = int(ref.total("wrapper_total")) if ref else 0
     lines = [
-        "# ZeroDay Sentinel evaluation",
+        "# Kavach evaluation",
         "",
         f"Seeded targets: {len(apps)} apps, {total} bugs ({wrappers} through project helpers, "
         f"{total - wrappers} direct). Generated {time.strftime('%Y-%m-%d %H:%M')} by `eval/run.py`.",

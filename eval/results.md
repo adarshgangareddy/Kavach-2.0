@@ -1,4 +1,4 @@
-# ZeroDay Sentinel evaluation
+# Kavach evaluation
 
 Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated 2026-10-28 17:32 by `eval/run.py`.
 
@@ -8,11 +8,11 @@ Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated
 |---|---|---|---|---|---|---|---|---|
 | Bandit | 6/13 | 46% | 4/9 | 2/4 | 7 | 46% | 0 | 0.22s |
 | Semgrep (p/python rules) | 7/13 | 54% | 3/9 | 4/4 | 3 | 70% | 0 | 2.74s |
-| ZeroDay Sentinel (taint) | 13/13 | 100% | 9/9 | 4/4 | 4 | 76% | 0 | 0.01s |
+| Kavach (taint) | 13/13 | 100% | 9/9 | 4/4 | 4 | 76% | 0 | 0.01s |
 
 ## Per app
 
-| App | Bugs | Bandit | Semgrep (p/python rules) | ZeroDay Sentinel (taint) |
+| App | Bugs | Bandit | Semgrep (p/python rules) | Kavach (taint) |
 |---|---|---|---|---|
 | app1 | 4 | 2/4 | 2/4 | 4/4 |
 | app2 | 5 | 3/5 | 3/5 | 5/5 |
@@ -22,7 +22,7 @@ Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated
 
 - **Bandit:** app1/helpers.py:11 CWE-22 (wrapper), app1/helpers.py:21 CWE-89 (wrapper), app2/helpers.py:12 CWE-89 (wrapper), app2/app.py:36 CWE-22 (direct), app3/helpers.py:7 CWE-22 (wrapper), app3/helpers.py:16 CWE-89 (wrapper), app3/app.py:36 CWE-22 (direct)
 - **Semgrep (p/python rules):** app1/helpers.py:11 CWE-22 (wrapper), app1/helpers.py:21 CWE-89 (wrapper), app2/helpers.py:12 CWE-89 (wrapper), app2/helpers.py:16 CWE-78 (wrapper), app3/helpers.py:7 CWE-22 (wrapper), app3/helpers.py:16 CWE-89 (wrapper)
-- **ZeroDay Sentinel (taint):** none
+- **Kavach (taint):** none
 
 ## Ablation
 

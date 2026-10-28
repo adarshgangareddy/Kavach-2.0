@@ -99,8 +99,8 @@ def test_report_and_cli(evalmod, targets, tmp_path, capsys):
     out = tmp_path / "results.md"
     assert evalmod.main(["--targets", str(targets), "--out", str(out)]) == 0
     report = out.read_text()
-    assert "## Head-to-head" in report and "ZeroDay Sentinel (taint)" in report
-    assert "| ZeroDay Sentinel (taint) | 2/2 | 100% | 1/1 | 1/1 | 1 |" in report
+    assert "## Head-to-head" in report and "Kavach (taint)" in report
+    assert "| Kavach (taint) | 2/2 | 100% | 1/1 | 1/1 | 1 |" in report
     assert "Small sample: 1 apps and 2 seeded bugs" in report
     assert "Vulnerable commits blocked before merge: 1/1" in report
     data = json.loads(out.with_suffix(".json").read_text())

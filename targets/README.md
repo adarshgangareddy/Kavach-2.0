@@ -1,6 +1,6 @@
 # Seeded target apps
 
-Small, deliberately vulnerable Flask apps used to evaluate ZeroDay Sentinel against Bandit and
+Small, deliberately vulnerable Flask apps used to evaluate Kavach against Bandit and
 Semgrep, and to train the ML ranker. They are our own code, scanned statically, and never deployed
 or exposed to a network.
 

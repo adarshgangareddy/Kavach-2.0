@@ -121,7 +121,7 @@
       "recall": 0.5384615384615384
     },
     {
-      "name": "ZeroDay Sentinel (taint)",
+      "name": "Kavach (taint)",
       "available": true,
       "note": "",
       "apps": {

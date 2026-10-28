@@ -1,4 +1,4 @@
-# ZeroDay Sentinel
+# Kavach
 
 Flask vulnerability scanner for Hack Fest 2026 PS-01. Read docs/prd.md first.
 Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or started.

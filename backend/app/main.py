@@ -53,7 +53,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="ZeroDay Sentinel", version=__version__, lifespan=lifespan)
+app = FastAPI(title="Kavach", version=__version__, lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in os.environ.get("SENTINEL_CORS_ORIGINS", DEFAULT_ORIGINS).split(",")

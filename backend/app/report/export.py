@@ -21,7 +21,7 @@ _DISCLAIMER = ("Static analysis results. Confidence tiers state how much evidenc
 
 def json_report(scan: Scan, findings: list[Finding]) -> dict:
     return {
-        "tool": {"name": "ZeroDay Sentinel", "version": __version__},
+        "tool": {"name": "Kavach", "version": __version__},
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "scan": scan.model_dump(mode="json"),
         "summary": summary(findings),
@@ -38,7 +38,7 @@ class _Report(FPDF):
     def header(self) -> None:
         self.set_font("Helvetica", "B", 9)
         self.set_text_color(100, 100, 100)
-        self.cell(0, 6, "ZeroDay Sentinel - security scan report", align="R",
+        self.cell(0, 6, "Kavach - security scan report", align="R",
                   new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     def footer(self) -> None:

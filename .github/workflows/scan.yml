@@ -1,4 +1,4 @@
-name: ZeroDay Sentinel PR scan
+name: Kavach PR scan
 
 on:
   pull_request:
@@ -66,5 +66,5 @@ jobs:
       - name: Fail on high-severity findings
         if: steps.scan.outcome == 'failure'
         run: |
-          echo "::error::ZeroDay Sentinel found severity >= 7 issues in changed code."
+          echo "::error::Kavach found severity >= 7 issues in changed code."
           exit 1

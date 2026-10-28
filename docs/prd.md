@@ -1,8 +1,9 @@
-# ZeroDay Sentinel: PRD summary and build status
+# Kavach: PRD summary and build status
 
 Source: "ZeroDay Sentinel – PRDs by Layer and Feature Component, with Claude Code Plan" (Oct 28, 2026).
+The product was later renamed Kavach; the PRD keeps its original name.
 
-ZeroDay Sentinel scans Python Flask apps for hidden dangerous paths, including ones that
+Kavach scans Python Flask apps for hidden dangerous paths, including ones that
 no rule list names. It catches them early (commit and PR), proves and rates them, suggests
 fixes and tracks them on a dashboard.
 

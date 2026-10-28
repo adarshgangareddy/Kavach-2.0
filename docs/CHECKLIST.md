@@ -1,4 +1,4 @@
-# ZeroDay Sentinel: feature checklist
+# Kavach: feature checklist
 
 Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is finished or started.
 

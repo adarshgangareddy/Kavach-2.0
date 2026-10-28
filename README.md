@@ -1,7 +1,7 @@
 # pocketrocket-t2-04
 Official HackFest 2026 repository for team PocketRocket (T2-04).
 
-## ZeroDay Sentinel
+## Kavach
 
 A security scanner for Python Flask apps. It takes in code, runs detectors, scores and
 classifies the findings, catches issues at commit and PR time, and tracks everything on a
@@ -47,7 +47,7 @@ when `conftest.py` or packaging changes. `tests/test_targets_regression.py` re-s
 backend/.venv/bin/python eval/run.py
 ```
 
-Runs Bandit, Semgrep (`p/python` registry rules) and ZeroDay Sentinel on every app in `targets/`, and
+Runs Bandit, Semgrep (`p/python` registry rules) and Kavach on every app in `targets/`, and
 writes `eval/results.md` (head-to-head, per app, missed bugs, ablation, early-detection timing,
 caveats) and `eval/results.json`. Targets are scanned statically and never run.
 

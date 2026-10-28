@@ -9,7 +9,7 @@ from app.schema import Finding, Status
 
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
-TOOL_NAME = "ZeroDay Sentinel"
+TOOL_NAME = "Kavach"
 
 
 def _level(sev: float) -> str:
@@ -82,7 +82,7 @@ def _result(f: Finding, rule_index: int) -> dict:
         result["codeFlows"] = flows
     if f.status == Status.ACCEPTED:
         result["suppressions"] = [{"kind": "external", "status": "accepted",
-                                   "justification": "Risk accepted in ZeroDay Sentinel"}]
+                                   "justification": "Risk accepted in Kavach"}]
     return result
 
 
