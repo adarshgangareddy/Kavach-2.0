@@ -1,12 +1,12 @@
 # ZeroDay Sentinel evaluation
 
-Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated 2026-10-28 16:39 by `eval/run.py`.
+Seeded targets: 3 apps, 13 bugs (9 through project helpers, 4 direct). Generated 2026-10-28 16:42 by `eval/run.py`.
 
 ## Head-to-head
 
 | Tool | Caught | Recall | Wrapper bugs | Direct bugs | Extra findings | Precision | Extra at severity ≥ 7 | Scan time |
 |---|---|---|---|---|---|---|---|---|
-| Bandit | 6/13 | 46% | 4/9 | 2/4 | 7 | 46% | 0 | 0.21s |
+| Bandit | 6/13 | 46% | 4/9 | 2/4 | 7 | 46% | 0 | 0.26s |
 | Semgrep (default rules) | not run (semgrep not installed) | | | | | | | |
 | ZeroDay Sentinel (taint) | 13/13 | 100% | 9/9 | 4/4 | 4 | 76% | 0 | 0.01s |
 
@@ -39,11 +39,11 @@ Each app: helpers committed first, then a commit adding the routes, run through 
 
 | App | Commit blocked | Hook time |
 |---|---|---|
-| app1 | yes | 0.03s |
-| app2 | yes | 0.03s |
-| app3 | yes | 0.03s |
+| app1 | yes | 0.02s |
+| app2 | yes | 0.02s |
+| app3 | yes | 0.02s |
 
-Vulnerable commits blocked before merge: 3/3 (100%). Median hook time: 0.03s.
+Vulnerable commits blocked before merge: 3/3 (100%). Median hook time: 0.02s.
 
 ## Caveats
 
