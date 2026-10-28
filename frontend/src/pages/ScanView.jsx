@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, severityLabel, SEVERITY_ORDER, STATUSES } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
-import { BarChart, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary, severityRows } from '../components.jsx'
+import { BarChart, ConfirmDelete, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary, severityRows } from '../components.jsx'
 
 const POLL_MS = 1000
 
@@ -80,6 +80,13 @@ function FindingCard({ f, catalog }) {
   )
 }
 
+function DeleteScanButton({ scan }) {
+  return (
+    <ConfirmDelete label="Delete scan" question="Delete this scan, its findings and stored code?"
+                   onConfirm={async () => { await api.deleteScan(scan.id); window.location.hash = '#/' }} />
+  )
+}
+
 export default function ScanView({ scanId }) {
   const { scan, findings, error } = useScan(scanId)
   const catalog = useCatalog()
@@ -123,6 +130,7 @@ export default function ScanView({ scanId }) {
               {['pdf', 'json', 'sarif'].map((k) => (
                 <a key={k} className="button" href={api.exportUrl(scan.id, k)} download>{k.toUpperCase()}</a>
               ))}
+              <DeleteScanButton scan={scan} />
             </div>
           )}
         </div>

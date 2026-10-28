@@ -48,6 +48,7 @@ export const api = {
   cweCatalog: () => json('/cwe'),
   listScans: () => json('/scans'),
   getScan: (id) => json(`/scans/${id}`),
+  deleteScan: (id) => request(`/scans/${id}`, { method: 'DELETE' }),
   findings: (id) => json(`/scans/${id}/findings`),
   finding: (id) => json(`/findings/${id}`),
   setStatus: (id, status) =>

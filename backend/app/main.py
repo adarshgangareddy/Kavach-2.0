@@ -7,6 +7,7 @@ user's record answers 404, the same as a missing one, so ids leak nothing.
 
 import logging
 import os
+import shutil
 import sqlite3
 from contextlib import asynccontextmanager
 from functools import lru_cache
@@ -27,9 +28,9 @@ from app.config import Settings, get_settings
 from app.detect.registry import all_detectors
 from app.ingest import IngestError, github, upload
 from app.ingest.snippet import write_snippet
-from app.ingest.workspace import fresh_workspace, resolve_source_file
-from app.models import (SCAN_ID_PATTERN, LoginRequest, RegisterRequest, Scan, SnippetRequest,
-                        StatusUpdate)
+from app.ingest.workspace import fresh_workspace, resolve_source_file, workspace_for
+from app.models import (SCAN_ID_PATTERN, LoginRequest, RegisterRequest, Scan, ScanStatus,
+                        SnippetRequest, StatusUpdate)
 from app.rank.model import load_model
 from app.report import owasp, sarif
 from app.report.export import json_report, pdf_report
@@ -58,7 +59,7 @@ app.add_middleware(
     allow_origins=[o.strip() for o in os.environ.get("SENTINEL_CORS_ORIGINS", DEFAULT_ORIGINS).split(",")
                    if o.strip()],
     allow_credentials=True,  # the session cookie; origins must be listed explicitly, never "*"
-    allow_methods=["GET", "POST", "PATCH"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
 )
 limiter = Limiter(key_func=get_remote_address)
@@ -236,6 +237,17 @@ def scan_snippet(body: SnippetRequest, store: StoreDep, settings: SettingsDep,
 def list_scans(store: StoreDep, user: CurrentUser,
                limit: int = Query(50, ge=1, le=200)) -> list[Scan]:
     return store.list_scans(user.id, limit)
+
+
+@app.delete("/scans/{scan_id}", status_code=204)
+def delete_scan(scan_id: ScanId, store: StoreDep, settings: SettingsDep, user: CurrentUser) -> Response:
+    """Delete a scan for good: its findings, its record and its encrypted source on disk."""
+    scan = _scan_or_404(store, scan_id, user)
+    if scan.status in (ScanStatus.QUEUED, ScanStatus.RUNNING):
+        raise HTTPException(409, "This scan is still running; delete it when it has finished")
+    store.delete_scan(scan_id, user.id)
+    shutil.rmtree(workspace_for(scan_id, settings), ignore_errors=True)
+    return Response(status_code=204)
 
 
 @app.get("/scans/{scan_id}", response_model=Scan)

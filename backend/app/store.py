@@ -89,6 +89,14 @@ class Store:
         with self._conn() as conn:
             conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
 
+    def delete_scan(self, scan_id: str, owner_id: str) -> bool:
+        """Delete a scan and (by cascade) its findings. Only its owner can."""
+        with self._conn() as conn:
+            conn.execute("DELETE FROM findings WHERE scan_id IN "
+                         "(SELECT id FROM scans WHERE id = ? AND owner_id = ?)", (scan_id, owner_id))
+            return conn.execute("DELETE FROM scans WHERE id = ? AND owner_id = ?",
+                                (scan_id, owner_id)).rowcount == 1
+
     def assign_unowned_scans(self, owner_id: str) -> int:
         """Give scans from before user accounts to `owner_id` (the seeded admin)."""
         with self._conn() as conn:

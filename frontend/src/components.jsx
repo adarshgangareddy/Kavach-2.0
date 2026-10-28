@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { SEVERITY_ORDER, severityLabel } from './api.js'
 
 export function SeverityPill({ score }) {
@@ -49,6 +50,47 @@ export function BarChart({ title, rows, onSelect, selected }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+/**
+ * A delete button that asks for confirmation in the page itself. Browser pop-ups
+ * (window.confirm) are blocked in some browsers and embedded views, where they
+ * silently answer "Cancel".
+ */
+export function ConfirmDelete({ label = 'Delete', question = 'Delete for good?', onConfirm, disabled }) {
+  const [armed, setArmed] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function confirm() {
+    setBusy(true)
+    setError('')
+    try {
+      await onConfirm()
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+      setArmed(false)
+    }
+  }
+
+  if (!armed) {
+    return (
+      <span className="confirm-delete">
+        <button type="button" className="danger" disabled={disabled} onClick={() => setArmed(true)}>{label}</button>
+        {error && <span className="hint bad small" role="alert">{error}</span>}
+      </span>
+    )
+  }
+  return (
+    <span className="confirm-delete armed" role="group" aria-label={question}>
+      <span className="small">{question}</span>
+      <button type="button" className="danger solid" disabled={busy} onClick={confirm} autoFocus>
+        {busy ? 'Deleting…' : 'Yes, delete'}
+      </button>
+      <button type="button" disabled={busy} onClick={() => setArmed(false)}>Cancel</button>
+    </span>
   )
 }
 

@@ -348,3 +348,18 @@ button.small-button { padding: 5px 10px; font-size: 12.5px; }
 .login-form .hint { font-weight: 400; font-size: 12px; color: var(--muted); }
 .login-form .hint.bad { color: var(--high); }
 .switch-mode { margin: 14px 0 0; text-align: center; }
+
+/* Delete scan */
+.scan-item { display: flex; gap: 8px; align-items: stretch; }
+.scan-item .scan-row { flex: 1; min-width: 0; }
+button.danger { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 45%, var(--border)); background: none; }
+button.danger:hover:not(:disabled) { border-color: var(--critical); background: color-mix(in srgb, var(--critical) 10%, transparent); }
+.delete-scan { align-self: center; }
+.confirm-delete { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.confirm-delete.armed { padding: 4px 6px; border: 1px solid color-mix(in srgb, var(--critical) 45%, var(--border)); border-radius: 8px; }
+button.danger.solid { background: var(--critical); color: #fff; border-color: var(--critical); font-weight: 600; }
+button.danger.solid:hover:not(:disabled) { background: var(--critical); filter: brightness(1.1); }
+.scan-item .delete-scan { align-self: center; flex: none; }
+.scan-item { flex-wrap: wrap; }
+.scan-item .scan-row { flex: 1 1 320px; }
+.scan-item .delete-scan { margin-left: auto; }

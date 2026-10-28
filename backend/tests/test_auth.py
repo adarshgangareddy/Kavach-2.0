@@ -214,3 +214,45 @@ def test_register_is_rate_limited():
     codes = [client.post("/auth/register", json={"email": f"user{i}@example.test", "password": NEW_PASSWORD}).status_code
              for i in range(4)]
     assert codes == [201, 201, 201, 429]
+
+
+# deleting scans -----------------------------------------------------------------
+
+def test_owner_can_delete_a_scan_and_everything_stored_for_it(marker):
+    client = signed_in_client()
+    scan = client.post("/scans", files={"file": ("demo.zip", _zip(), "application/zip")}).json()
+    sid = scan["id"]
+    fid = client.get(f"/scans/{sid}/findings").json()[0]["id"]
+    workspace = get_settings().workspaces / sid
+    assert workspace.exists()
+
+    assert client.delete(f"/scans/{sid}").status_code == 204
+    assert client.get("/scans").json() == []
+    assert client.get(f"/scans/{sid}").status_code == 404
+    assert client.get(f"/findings/{fid}").status_code == 404
+    assert not workspace.exists()  # the encrypted source is gone too
+    assert client.delete(f"/scans/{sid}").status_code == 404
+
+
+def test_users_cannot_delete_each_others_scans(marker):
+    owner = signed_in_client()
+    sid = owner.post("/scans", files={"file": ("demo.zip", _zip(), "application/zip")}).json()["id"]
+    _add_user()
+    other = signed_in_client(OTHER_EMAIL, OTHER_PASSWORD)
+    assert other.delete(f"/scans/{sid}").status_code == 404
+    assert owner.get(f"/scans/{sid}").status_code == 200
+    assert (get_settings().workspaces / sid).exists()
+
+
+def test_running_scan_cannot_be_deleted():
+    from app.models import Scan, ScanStatus
+    client = signed_in_client()
+    admin = _store().get_user_by_email(ADMIN_EMAIL)[0]
+    scan = Scan(source_kind="zip", source_ref="busy.zip", status=ScanStatus.RUNNING, owner_id=admin.id)
+    _store().save_scan(scan)
+    assert client.delete(f"/scans/{scan.id}").status_code == 409
+    assert client.get(f"/scans/{scan.id}").status_code == 200
+
+
+def test_delete_needs_a_session():
+    assert TestClient(app).delete("/scans/S-0000abcd").status_code == 401
