@@ -13,6 +13,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 
 ## Commands
 - Setup: cd backend && python3 -m venv .venv && .venv/bin/pip install -e ".[dev]" bandit
+- Docker: docker compose up --build  (dashboard on http://localhost:8080; needs backend/.env)
 - Backend: cd backend && .venv/bin/uvicorn app.main:app --reload
 - Tests: cd backend && .venv/bin/pytest -q
 - Affected tests only: cd backend && .venv/bin/python -m app.devtools.regress [--base origin/main] [--dry-run]

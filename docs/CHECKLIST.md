@@ -73,6 +73,8 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ Authentication: Argon2id passwords, 30-minute JWT in an HttpOnly/SameSite=Lax cookie, 5/min login rate limit, generic login errors, sign-up (3/min, 12+ character passwords, turn off with SENTINEL_ALLOW_SIGNUP=false), per-user scoping of scans and findings, React sign-in/sign-up page and protected routes
 - [x] ✅ Encryption at rest: scan workspaces stored as AES-256-GCM archives bound to the scan ID; plaintext deleted after each scan (and on failure); existing workspaces migrated at startup (`app/vault.py`)
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
+- [x] ✅ One-command Docker setup: `docker compose up --build` (API container not published, dashboard on 127.0.0.1:8080 via nginx with security headers, data in a volume, unprivileged users, Semgrep in its own venv)
+- [x] ✅ "Found only by Kavach" panel on each scan: Kavach-only / both / Bandit-or-Semgrep-only groups that filter the list, and an "Only Kavach" tag on issues the other tools missed
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
 - [x] ✅ 221 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)

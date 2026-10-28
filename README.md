@@ -8,7 +8,20 @@ classifies the findings, catches issues at commit and PR time, and tracks everyt
 dashboard. See [docs/prd.md](docs/prd.md) for the design and
 [docs/CHECKLIST.md](docs/CHECKLIST.md) for what is done and what remains.
 
-### Quick start
+### Run with Docker (one command)
+
+```bash
+cp backend/.env.example backend/.env    # fill in SENTINEL_JWT_SECRET and the admin password
+docker compose up --build
+```
+
+Open http://localhost:8080 and sign in with the admin email and password from `backend/.env`.
+The API is not published to the host; only the dashboard (bound to 127.0.0.1) talks to it. Scans,
+the database and the encryption key live in the `kavach-data` volume (`docker compose down -v`
+deletes them). Build without Semgrep for a smaller image:
+`docker compose build --build-arg WITH_SEMGREP=false`.
+
+### Quick start (without Docker)
 
 First copy `backend/.env.example` to `backend/.env` and fill in `SENTINEL_JWT_SECRET` and the admin
 email and password. The admin account is created on startup; sign in with it on the dashboard.

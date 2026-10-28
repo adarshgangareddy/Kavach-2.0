@@ -1,0 +1,11 @@
+# Keep secrets, local data and environments out of the image.
+.env
+.env.*
+!.env.example
+.venv/
+.sentinel-data/
+.pytest_cache/
+**/__pycache__/
+*.egg-info/
+tests/
+labeled*.jsonl
