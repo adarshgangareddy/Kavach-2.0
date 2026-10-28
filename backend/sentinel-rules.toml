@@ -1,0 +1,52 @@
+# ZeroDay Sentinel taint rules. Read by app/detect/taint.py.
+# Override the location with SENTINEL_RULES=/path/to/rules.toml.
+#
+# Patterns are fnmatch-style call names, matched against both the name as
+# written and the import-resolved name ("sp.run" with `import subprocess as sp`
+# also matches "subprocess.run"). Use "*.name" to match a method on any object.
+#
+# The taint detector stays disabled until at least one rule lists a sink.
+
+# Decorators that mark public entry points (Flask routes).
+entry_decorators = ["*.route", "*.get", "*.post", "*.put", "*.patch", "*.delete"]
+
+# Expressions whose value comes from the HTTP request.
+sources = [
+    "request.args",
+    "request.form",
+    "request.values",
+    "request.json",
+    "request.get_json",
+    "request.data",
+    "request.get_data",
+    "request.cookies",
+    "request.headers",
+    "request.files",
+    "request.view_args",
+]
+
+# One table per bug class. Sanitizers only clean data for their own rule.
+
+[[rule]]
+id = "command-injection"
+cwe = "CWE-78"
+sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sanitizers = ["shlex.quote"]
+
+[[rule]]
+id = "sql-injection"
+cwe = "CWE-89"
+sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sanitizers = []
+
+[[rule]]
+id = "path-traversal"
+cwe = "CWE-22"
+sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sanitizers = ["secure_filename", "werkzeug.utils.secure_filename"]
+
+[[rule]]
+id = "unsafe-deserialization"
+cwe = "CWE-502"
+sinks = []  # TODO(team): fill in from PRD section 8, L2 "Sinks in v1"
+sanitizers = []

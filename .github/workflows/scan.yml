@@ -1,0 +1,52 @@
+name: ZeroDay Sentinel PR scan
+
+on:
+  pull_request:
+
+# pull_request (not pull_request_target): fork PRs get a read-only token and no secrets.
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install scanner
+        run: pip install ./backend bandit
+
+      - name: Scan changed code
+        id: scan
+        continue-on-error: true
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          SENTINEL_RULES: backend/sentinel-rules.toml
+        run: >
+          sentinel scan . --diff-base "origin/$BASE_REF"
+          --format sarif --out sentinel.sarif --fail-on 7
+
+      - name: Validate SARIF
+        if: always()
+        run: sentinel validate-sarif sentinel.sarif
+
+      - name: Upload results to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sentinel.sarif
+          category: zeroday-sentinel
+
+      - name: Fail on high-severity findings
+        if: steps.scan.outcome == 'failure'
+        run: |
+          echo "::error::ZeroDay Sentinel found severity >= 7 issues in changed code."
+          exit 1

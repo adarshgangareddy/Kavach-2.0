@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Scanner runtime data (workspaces, SQLite DB, caches)
+backend/.sentinel-data/
+.sentinel-cache.json
+*.sarif
+
+# Secrets
+.env
+.env.*
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
