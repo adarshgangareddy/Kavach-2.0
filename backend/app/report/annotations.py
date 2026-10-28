@@ -36,8 +36,9 @@ def annotations(doc: dict) -> list[str]:
             if help_text := rule.get("help", {}).get("text"):
                 message += f"\nFix: {help_text}"
             command = _COMMAND.get(res.get("level", "warning"), "warning")
+            heading = f"{res.get('ruleId', '')} {title}".strip()
             props = ",".join([f"file={_escape_property(path)}", f"line={int(line)}",
-                              f"title={_escape_property(f'{res.get('ruleId', '')} {title}'.strip())}"])
+                              f"title={_escape_property(heading)}"])
             severity = float(res.get("properties", {}).get("severity", 0))
             lines.append((severity, f"::{command} {props}::{_escape_data(message)}"))
     lines.sort(key=lambda item: -item[0])
