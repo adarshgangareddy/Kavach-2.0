@@ -2,6 +2,8 @@
 
     sentinel scan PATH [--diff-base REF] [--format text|json|sarif] [--out FILE] [--fail-on N]
     sentinel validate-sarif FILE
+    sentinel annotate FILE
+    sentinel watch [--scan] [--once] [--status FILE]
 """
 
 import argparse
@@ -29,6 +31,13 @@ def _scan(args: argparse.Namespace) -> int:
     started = time.monotonic()
     root = args.path.resolve()
     filtered = filter_project(root, settings.max_file_bytes)
+    excluded = [p.strip("/") for p in args.exclude]
+    if excluded:
+        kept = [f for f in filtered.files
+                if not any(f == p or f.startswith(p + "/") for p in excluded)]
+        filtered.notes.append(f"Excluded {len(filtered.files) - len(kept)} files under "
+                              f"{', '.join(excluded)}.")
+        filtered.files = kept
     files = filtered.files
     changed = None
     if args.diff_base:
@@ -87,13 +96,20 @@ def _annotate(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="sentinel")
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["watch"]:  # its own parser and help text
+        from app.early import watch
+        return watch.main(argv[1:])
+    parser = argparse.ArgumentParser(prog="sentinel",
+                                     epilog="also: sentinel watch --help (monitor changing functions)")
     sub = parser.add_subparsers(dest="command", required=True)
     scan = sub.add_parser("scan", help="scan a project directory")
     scan.add_argument("path", type=Path, nargs="?", default=Path("."))
     scan.add_argument("--diff-base", help="only report findings in code changed since this ref")
     scan.add_argument("--format", choices=["text", "json", "sarif"], default="text")
     scan.add_argument("--out", type=Path)
+    scan.add_argument("--exclude", action="append", default=[], metavar="DIR",
+                      help="skip files under this project-relative folder (repeatable)")
     scan.add_argument("--fail-on", type=float, default=11.0,
                       help="exit 1 if any finding has at least this severity (default: never)")
     scan.set_defaults(func=_scan)

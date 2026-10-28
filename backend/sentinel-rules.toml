@@ -5,6 +5,14 @@
 # written and the import-resolved name ("sp.run" with `import subprocess as sp`
 # also matches "subprocess.run"). Use "*.name" to match a method on any object.
 #
+# A sink is either a pattern string (data in any argument counts) or a table
+# that narrows which arguments carry the dangerous value:
+#   { call = "*.execute", args = [0], kwargs = ["sql"], when = { shell = true } }
+#   args   argument positions that count (0 = first)
+#   kwargs keyword names that count
+#   when   keyword values the call must have to be dangerous; a non-literal
+#          value or **kwargs counts as possibly matching
+#
 # The taint detector is disabled when no rule lists a sink.
 
 # Decorators that mark public entry points (Flask routes).
@@ -30,23 +38,31 @@ sources = [
 [[rule]]
 id = "command-injection"
 cwe = "CWE-78"
-sinks = ["os.system", "subprocess.run", "subprocess.call", "subprocess.Popen"]
+# subprocess only with shell=True (PRD: "subprocess with shell"); the command is the first argument.
+sinks = [
+    "os.system",
+    { call = "subprocess.run", args = [0], kwargs = ["args"], when = { shell = true } },
+    { call = "subprocess.call", args = [0], kwargs = ["args"], when = { shell = true } },
+    { call = "subprocess.Popen", args = [0], kwargs = ["args"], when = { shell = true } },
+]
 sanitizers = ["shlex.quote"]
 
 [[rule]]
 id = "sql-injection"
 cwe = "CWE-89"
-sinks = ["*.execute"]
+# Only the SQL text counts. Values in the parameters argument are bound safely.
+sinks = [{ call = "*.execute", args = [0], kwargs = ["sql", "operation"] }]
 sanitizers = []
 
 [[rule]]
 id = "path-traversal"
 cwe = "CWE-22"
-sinks = ["open"]
+# Only the path counts, not the mode or encoding.
+sinks = [{ call = "open", args = [0], kwargs = ["file"] }]
 sanitizers = ["secure_filename", "werkzeug.utils.secure_filename"]
 
 [[rule]]
 id = "unsafe-deserialization"
 cwe = "CWE-502"
-sinks = ["pickle.loads"]
+sinks = [{ call = "pickle.loads", args = [0], kwargs = ["data"] }]
 sanitizers = []

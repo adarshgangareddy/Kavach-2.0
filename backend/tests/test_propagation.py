@@ -227,3 +227,100 @@ def test_cli_json(tmp_path, capsys):
     assert propagation.main([str(tmp_path), "--sink", "store", "--json"]) == 0
     data = json.loads(capsys.readouterr().out)
     assert data["flows"][0]["origin"] == "param:q"
+
+
+def test_literal_dynamic_imports_resolve_for_sinks_and_sanitizers():
+    result = run({"m.py": """
+        import importlib
+
+        def via_dunder(q):
+            __import__("pkg").store(q)
+
+        def via_importlib(q):
+            importlib.import_module("pkg").store(q)
+
+        def cleaned(q):
+            store(__import__("tools").clean(q))
+
+        def computed(q, name):
+            __import__(name).store(q)
+    """}, Config(sinks=("pkg.store", "store"), sanitizers=("tools.clean",)))
+    by_entry = {f.entry: f for f in result.flows}
+    assert by_entry["via_dunder"].sink == "pkg.store"
+    assert by_entry["via_importlib"].sink == "pkg.store"
+    assert by_entry["cleaned"].sanitized is True
+    assert "computed" not in by_entry  # a non-literal module name is not guessed
+
+
+def test_chained_calls_are_separate_call_sites():
+    result = run({"m.py": """
+        def entry(q):
+            connect().store(q)
+
+        def nested(q):
+            connect(q).store("fixed")
+    """}, Config(sinks=("*.store",)))
+    flows = {f.entry: f for f in result.flows}
+    assert flows["entry"].sink == "connect().store"
+    assert flows["nested"].sink == "connect().store"  # q flows into the receiver
+
+
+def test_one_input_reaching_several_sinks_reports_each():
+    result = run({"m.py": """
+        def helper(v):
+            store(v)
+
+        def entry(q):
+            store(q)
+            helper(q)
+    """})
+    flows = [(f.line, f.path) for f in result.flows if f.entry == "entry"]
+    assert flows == [(3, ("entry()", "helper()", "store")), (6, ("entry()", "store"))]
+
+
+def test_argument_aware_sinks():
+    from app.detect.propagation import SinkSpec
+    config = Config(sinks=(
+        SinkSpec("*.query", args=(0,), kwargs=("sql",)),
+        SinkSpec("runner.go", args=(0,), when=(("shell", True),)),
+    ))
+    result = run({"m.py": """
+        import runner
+
+        def built(q, db):
+            db.query("SELECT " + q)
+
+        def parameterized(q, db):
+            db.query("SELECT ?", (q,))
+
+        def by_keyword(q, db):
+            db.query(sql=q)
+
+        def tainted_receiver(q):
+            connect(q).query("SELECT 1")
+
+        def with_shell(q):
+            runner.go(q, shell=True)
+
+        def no_shell(q):
+            runner.go(q)
+
+        def shell_false(q):
+            runner.go(q, shell=False)
+
+        def shell_unknown(q, flag):
+            runner.go(q, shell=flag)
+
+        def spread(q, opts):
+            runner.go(q, **opts)
+    """}, config)
+    assert {f.entry for f in result.flows} == {
+        "built", "by_keyword", "with_shell", "shell_unknown", "spread"}
+
+
+def test_plain_string_sinks_still_match_any_argument():
+    result = run({"m.py": """
+        def entry(q, db):
+            db.store("fixed", q)
+    """}, Config(sinks=("*.store",)))
+    assert {f.origin for f in result.flows} == {"param:q", "param:db"}  # receiver counts too

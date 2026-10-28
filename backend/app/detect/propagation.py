@@ -37,15 +37,59 @@ from pathlib import Path
 
 Label = str
 Env = dict[str, frozenset[Label]]
+Fact = tuple[Label, str, int]  # (label, sink file, sink line)
 
 MAX_ROUNDS = 50
 MAX_LOOP_ITER = 10
 _EMPTY: frozenset[Label] = frozenset()
 
 
+_UNKNOWN = object()  # a keyword argument whose value is not a literal
+
+
+@dataclass(frozen=True)
+class SinkSpec:
+    """A sink call pattern, optionally narrowed to the arguments that matter.
+
+    args/kwargs: which positional indexes and keyword names carry the dangerous
+    value. None means every argument and the receiver (a plain string sink).
+    when: keyword values the call must have to be dangerous, e.g. shell=True.
+    A non-literal value, or a **kwargs spread, counts as possibly matching.
+    """
+    pattern: str
+    args: tuple[int, ...] | None = None
+    kwargs: tuple[str, ...] = ()
+    when: tuple[tuple[str, object], ...] = ()
+
+    def applies(self, site: CallSite) -> bool:
+        for name, wanted in self.when:
+            if name in site.consts:
+                value = site.consts[name]
+                if value is not _UNKNOWN and value != wanted:
+                    return False
+            elif not site.spread:
+                return False
+        return True
+
+    def labels(self, site: CallSite) -> frozenset[Label]:
+        if self.args is None:
+            return site.labels()
+        out = set(site.spread)  # *args/**kwargs may fill a dangerous slot
+        for i in self.args:
+            if i < len(site.args):
+                out |= site.args[i]
+        for name in self.kwargs:
+            out |= site.kwargs.get(name, _EMPTY)
+        return frozenset(out)
+
+
+def _spec(sink: str | SinkSpec) -> SinkSpec:
+    return sink if isinstance(sink, SinkSpec) else SinkSpec(sink)
+
+
 @dataclass(frozen=True)
 class Config:
-    sinks: tuple[str, ...]
+    sinks: tuple[str | SinkSpec, ...]
     sources: tuple[str, ...] = ()
     sanitizers: tuple[str, ...] = ()
     entry_decorators: tuple[str, ...] = ()
@@ -97,6 +141,7 @@ class CallSite:
     spread: frozenset[Label]
     via_attribute: bool
     target: str | None = None
+    consts: dict[str, object] = field(default_factory=dict)  # literal keyword values
 
     def labels(self) -> frozenset[Label]:
         out = set(self.receiver) | self.spread
@@ -112,6 +157,9 @@ class CallSite:
             self.kwargs[k] = self.kwargs.get(k, _EMPTY) | v
         self.receiver |= other.receiver
         self.spread |= other.spread
+        for k in self.consts.keys() | other.consts.keys():
+            mine, theirs = self.consts.get(k, _UNKNOWN), other.consts.get(k, _UNKNOWN)
+            self.consts[k] = mine if mine is theirs or mine == theirs else _UNKNOWN
         return self
 
 
@@ -153,14 +201,37 @@ class Result:
 
 # --- helpers -----------------------------------------------------------------
 
+def _dynamic_import(node: ast.AST) -> str | None:
+    """Module name for `__import__("pkg.mod")` or `importlib.import_module("pkg.mod")`."""
+    if not isinstance(node, ast.Call) or not node.args:
+        return None
+    arg = node.args[0]
+    if not (isinstance(arg, ast.Constant) and isinstance(arg.value, str) and arg.value):
+        return None
+    func = node.func
+    if isinstance(func, ast.Name) and func.id == "__import__":
+        # __import__("a.b") returns the top package `a`; attributes are then looked up on it.
+        return arg.value.split(".")[0]
+    if isinstance(func, ast.Attribute) and func.attr == "import_module" \
+            and isinstance(func.value, ast.Name) and func.value.id == "importlib":
+        return arg.value
+    return None
+
+
 def dotted(node: ast.AST) -> str | None:
-    """'a.b.c' for Name/Attribute chains, 'f().attr' through calls; None if dynamic."""
+    """'a.b.c' for Name/Attribute chains, 'f().attr' through calls; None if dynamic.
+
+    Literal dynamic imports resolve to the module: `__import__("shlex").quote`
+    is 'shlex.quote', so sinks and sanitizers match however they are imported.
+    """
     parts: list[str] = []
     while isinstance(node, ast.Attribute):
         parts.append(node.attr)
         node = node.value
     if isinstance(node, ast.Name):
         parts.append(node.id)
+    elif (module := _dynamic_import(node)) is not None:
+        parts.append(module)
     elif isinstance(node, ast.Call) and (inner := dotted(node.func)):
         parts.append(f"{inner}()")
     else:
@@ -388,12 +459,14 @@ class _FunctionAnalysis:
             else:
                 args.append(self._expr(arg, env))
         kwargs: dict[str, frozenset[Label]] = {}
+        consts: dict[str, object] = {}
         for kw in node.keywords:
             labels = self._expr(kw.value, env)
             if kw.arg is None:
                 spread |= labels
             else:
                 kwargs[kw.arg] = labels
+                consts[kw.arg] = kw.value.value if isinstance(kw.value, ast.Constant) else _UNKNOWN
 
         via_attribute = isinstance(node.func, ast.Attribute)
         receiver = self._expr(node.func.value, env) if via_attribute else _EMPTY
@@ -403,8 +476,10 @@ class _FunctionAnalysis:
             self.unresolved[node.lineno] = ast.unparse(node.func)[:80]
             raw = "<dynamic>"
         callee = self.project.canonical(self.fn.module, raw)
-        site = CallSite(raw, callee, node.lineno, receiver, args, kwargs, spread, via_attribute)
-        key = (node.lineno, node.col_offset)
+        site = CallSite(raw, callee, node.lineno, receiver, args, kwargs, spread, via_attribute,
+                        consts=consts)
+        # Start and end: in `get_db().execute(q)` both calls start at the same column.
+        key = (node.lineno, node.col_offset, node.end_lineno, node.end_col_offset)
         site = self.calls[key].merge(site) if key in self.calls else site
         self.calls[key] = site
 
@@ -556,21 +631,30 @@ class Project:
                       sorted({u for s in self.summaries.values() for u in s.unresolved}),
                       self.parse_errors, sorted(entries))
 
-    def _reach(self, config: Config) -> dict[str, dict[Label, Hit]]:
-        reach: dict[str, dict[Label, Hit]] = {key: {} for key in self.functions}
+    def _reach(self, config: Config) -> dict[str, dict[Fact, Hit]]:
+        """Per function: (label, sink file, sink line) -> shortest path there.
+
+        Keyed by sink location, not just label: one parameter can leak into
+        several sinks, and every one of them must be reported.
+        """
+        reach: dict[str, dict[Fact, Hit]] = {key: {} for key in self.functions}
 
         def offer(key: str, label: Label, hit: Hit) -> bool:
-            current = reach[key].get(label)
+            fact = (label, hit.file, hit.line)
+            current = reach[key].get(fact)
             if current is None or len(hit.path) < len(current.path):
-                reach[key][label] = hit
+                reach[key][fact] = hit
                 return True
             return False
 
+        specs = [_spec(s) for s in config.sinks]
         for fn in self.functions.values():
             for site in self.summaries[fn.key].calls:
-                if _matches(config.sinks, site.callee, site.raw):
+                for spec in specs:
+                    if not _matches((spec.pattern,), site.callee, site.raw) or not spec.applies(site):
+                        continue
                     hit = Hit(site.callee, fn.file, site.line, (fn.display, site.callee))
-                    for label in site.labels():
+                    for label in spec.labels(site):
                         offer(fn.key, label, hit)
 
         for _ in range(MAX_ROUNDS):
@@ -580,7 +664,7 @@ class Project:
                     if site.target is None or not reach[site.target]:
                         continue
                     binding = bind(self.functions[site.target], site)
-                    for label, hit in list(reach[site.target].items()):
+                    for (label, _, _), hit in list(reach[site.target].items()):
                         extended = Hit(hit.sink, hit.file, hit.line, (fn.display, *hit.path))
                         for mapped in substitute(frozenset({label}), binding, params_only=True):
                             changed |= offer(fn.key, mapped, extended)
@@ -601,22 +685,27 @@ class Project:
         called = {s.target for summ in self.summaries.values() for s in summ.calls if s.target}
         return set(self.functions) - called  # roots of the call graph
 
-    def _flows(self, reach: dict[str, dict[Label, Hit]], entries: set[str]) -> list[Flow]:
+    def _flows(self, reach: dict[str, dict[Fact, Hit]], entries: set[str]) -> list[Flow]:
         flows = []
         for key, facts in reach.items():
             fn = self.functions[key]
-            for label, hit in facts.items():
+            for (label, _, _), hit in facts.items():
                 base = label.lstrip("~")
                 if base.startswith("source:") or (base.startswith("param:") and key in entries):
                     flows.append(Flow(fn.qualname, fn.file, base, hit.sink, hit.file, hit.line,
                                       hit.path, label.startswith("~")))
-        return sorted(flows, key=lambda f: (f.entry_file, f.entry, f.origin, f.sanitized))
+        return sorted(flows, key=lambda f: (f.entry_file, f.entry, f.origin, f.sanitized,
+                                            f.file, f.line))
 
-    def _wrappers(self, reach: dict[str, dict[Label, Hit]]) -> dict[str, dict[str, str]]:
+    def _wrappers(self, reach: dict[str, dict[Fact, Hit]]) -> dict[str, dict[str, str]]:
         """Functions whose parameter reaches a sink without sanitizing: project-specific sinks."""
         out: dict[str, dict[str, str]] = {}
         for key, facts in reach.items():
-            params = {lbl[6:]: hit.sink for lbl, hit in facts.items() if lbl.startswith("param:")}
+            sinks: dict[str, set[str]] = {}
+            for (label, _, _), hit in facts.items():
+                if label.startswith("param:"):
+                    sinks.setdefault(label[6:], set()).add(hit.sink)
+            params = {name: ", ".join(sorted(found)) for name, found in sinks.items()}
             if params:
                 fn = self.functions[key]
                 out[f"{fn.file}::{fn.qualname}"] = dict(sorted(params.items()))

@@ -1,0 +1,299 @@
+{
+  "apps": [
+    "app1",
+    "app2",
+    "app3"
+  ],
+  "tools": [
+    {
+      "name": "Bandit",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 2,
+          "extra": 3,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 1,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.127,
+          "missed": [
+            "helpers.py:11 CWE-22 (wrapper)",
+            "helpers.py:21 CWE-89 (wrapper)"
+          ],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 3,
+          "extra": 1,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 2,
+          "direct_total": 2,
+          "direct_caught": 1,
+          "seconds": 0.068,
+          "missed": [
+            "helpers.py:12 CWE-89 (wrapper)",
+            "app.py:36 CWE-22 (direct)"
+          ],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 1,
+          "extra": 3,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 1,
+          "direct_total": 1,
+          "direct_caught": 0,
+          "seconds": 0.066,
+          "missed": [
+            "helpers.py:7 CWE-22 (wrapper)",
+            "helpers.py:16 CWE-89 (wrapper)",
+            "app.py:36 CWE-22 (direct)"
+          ],
+          "errors": []
+        }
+      },
+      "precision": 0.46153846153846156,
+      "recall": 0.46153846153846156
+    },
+    {
+      "name": "Semgrep (default rules)",
+      "available": false,
+      "note": "semgrep not installed",
+      "apps": {},
+      "precision": null,
+      "recall": null
+    },
+    {
+      "name": "ZeroDay Sentinel (taint)",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 2,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.003,
+          "missed": [],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 5,
+          "extra": 0,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 2,
+          "direct_caught": 2,
+          "seconds": 0.002,
+          "missed": [],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 2,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.002,
+          "missed": [],
+          "errors": []
+        }
+      },
+      "precision": 0.7647058823529411,
+      "recall": 1.0
+    }
+  ],
+  "ablation": [
+    {
+      "name": "Rules only (Bandit)",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 2,
+          "extra": 3,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 1,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.067,
+          "missed": [
+            "helpers.py:11 CWE-22 (wrapper)",
+            "helpers.py:21 CWE-89 (wrapper)"
+          ],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 3,
+          "extra": 1,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 2,
+          "direct_total": 2,
+          "direct_caught": 1,
+          "seconds": 0.066,
+          "missed": [
+            "helpers.py:12 CWE-89 (wrapper)",
+            "app.py:36 CWE-22 (direct)"
+          ],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 1,
+          "extra": 3,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 1,
+          "direct_total": 1,
+          "direct_caught": 0,
+          "seconds": 0.066,
+          "missed": [
+            "helpers.py:7 CWE-22 (wrapper)",
+            "helpers.py:16 CWE-89 (wrapper)",
+            "app.py:36 CWE-22 (direct)"
+          ],
+          "errors": []
+        }
+      },
+      "precision": 0.46153846153846156,
+      "recall": 0.46153846153846156
+    },
+    {
+      "name": "Taint only",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 2,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.002,
+          "missed": [],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 5,
+          "extra": 0,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 2,
+          "direct_caught": 2,
+          "seconds": 0.002,
+          "missed": [],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 2,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.002,
+          "missed": [],
+          "errors": []
+        }
+      },
+      "precision": 0.7647058823529411,
+      "recall": 1.0
+    },
+    {
+      "name": "Rules + taint",
+      "available": true,
+      "note": "",
+      "apps": {
+        "app1": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 4,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.07,
+          "missed": [],
+          "errors": []
+        },
+        "app2": {
+          "truth": 5,
+          "caught": 5,
+          "extra": 1,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 2,
+          "direct_caught": 2,
+          "seconds": 0.069,
+          "missed": [],
+          "errors": []
+        },
+        "app3": {
+          "truth": 4,
+          "caught": 4,
+          "extra": 4,
+          "extra_blocking": 0,
+          "wrapper_total": 3,
+          "wrapper_caught": 3,
+          "direct_total": 1,
+          "direct_caught": 1,
+          "seconds": 0.069,
+          "missed": [],
+          "errors": []
+        }
+      },
+      "precision": 0.5909090909090909,
+      "recall": 1.0
+    }
+  ],
+  "early_detection": [
+    {
+      "app": "app1",
+      "blocked": true,
+      "seconds": 0.022,
+      "blocking_findings": 4
+    },
+    {
+      "app": "app2",
+      "blocked": true,
+      "seconds": 0.022,
+      "blocking_findings": 5
+    },
+    {
+      "app": "app3",
+      "blocked": true,
+      "seconds": 0.023,
+      "blocking_findings": 4
+    }
+  ]
+}

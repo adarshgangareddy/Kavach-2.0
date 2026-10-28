@@ -38,11 +38,22 @@ depend on changed files. It runs the full suite whenever narrowing would be unsa
 when `conftest.py` or packaging changes. `tests/test_targets_regression.py` re-scans every seeded app in
 `targets/` and fails if a bug it used to catch is now missed, or if false positives go up.
 
+### Evaluation
+
+```bash
+backend/.venv/bin/python eval/run.py
+```
+
+Runs Bandit, default Semgrep (if installed) and ZeroDay Sentinel on every app in `targets/`, and
+writes `eval/results.md` (head-to-head, per app, missed bugs, ablation, early-detection timing,
+caveats) and `eval/results.json`. Targets are scanned statically and never run.
+
 ### Early detection
 
 ```bash
 scripts/install-hook.sh                         # blocks commits with severity >= 7
 SENTINEL_SKIP=1 git commit -m "..."             # bypass once
+sentinel watch --scan                           # as you save: changed functions + findings
 sentinel scan . --diff-base origin/main --format sarif --out sentinel.sarif
 ```
 

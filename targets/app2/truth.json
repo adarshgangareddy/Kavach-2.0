@@ -1,0 +1,7 @@
+[
+  {"file": "helpers.py", "line": 7, "cwe": "CWE-78", "kind": "wrapper"},
+  {"file": "helpers.py", "line": 12, "cwe": "CWE-89", "kind": "wrapper"},
+  {"file": "app.py", "line": 26, "cwe": "CWE-78", "kind": "direct"},
+  {"file": "helpers.py", "line": 16, "cwe": "CWE-78", "kind": "wrapper"},
+  {"file": "app.py", "line": 36, "cwe": "CWE-22", "kind": "direct"}
+]
