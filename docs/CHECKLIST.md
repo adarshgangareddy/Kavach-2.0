@@ -62,7 +62,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 
 ## Evaluation (PRD section 9)
 
-- [ ] 🟡 **Seeded target apps:** 1 of 3 received (`targets/app3`: 4 bugs, 2 safe decoys; taint 4/4, Bandit 1/4). app1 and app2 still needed. Spec in `targets/README.md`
+- [x] ✅ **Seeded target apps:** app1, app2, app3 in `targets/`: 13 seeded bugs (9 wrapper, 4 direct) and safe decoys. First result: taint 13/13, Bandit 6/13. Spec in `targets/README.md`
 - [ ] ⬜ **Head-to-head (`eval/run.py`):** Bandit vs default Semgrep vs ZeroDay Sentinel, with caught, missed and precision
 - [ ] ⬜ **Ablation:** rules only, taint only, taint plus ML, taint plus proof
 - [ ] ⬜ **Early-detection numbers:** median diff-scan time and percent of seeded commits flagged before merge
@@ -71,8 +71,8 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
-- [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app3
-- [x] ✅ 145 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
+- [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3
+- [x] ✅ 149 backend tests, passing on Python 3.11 and 3.14, with no vulnerable code (marker comments, made-up sinks, synthetic ranker data)
 - [x] ✅ Docs: `README.md`, `CLAUDE.md`, `docs/prd.md`, this checklist
 - [x] ✅ PR [#1](https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04/pull/1) opened, with Auto-fix watching CI
 - [ ] ⬜ PR #1 reviewed and merged into `main`
