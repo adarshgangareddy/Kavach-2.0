@@ -5,6 +5,7 @@ import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
 import ScanView from './pages/ScanView.jsx'
 import FindingView from './pages/FindingView.jsx'
+import Monitor from './pages/Monitor.jsx'
 
 const CatalogContext = createContext({})
 export const useCatalog = () => useContext(CatalogContext)
@@ -85,6 +86,7 @@ export default function App() {
   const finding = route.match(/^\/findings\/(F-[0-9a-f]{8}-\d+)$/)
   if (scan) page = <ScanView scanId={scan[1]} />
   else if (finding) page = <FindingView findingId={finding[1]} />
+  else if (route === '/monitor') page = <Monitor />
   else page = <Home />
 
   return (
@@ -101,6 +103,8 @@ export default function App() {
         </a>
         {user && (
           <nav className="topnav">
+            <a href="#/" className={route === '/' ? 'navlink active' : 'navlink'}>Scans</a>
+            <a href="#/monitor" className={route === '/monitor' ? 'navlink active' : 'navlink'}>Monitoring</a>
             <DetectorBadge />
             <span className="muted small user-email" title={`Signed in as ${user.email} (${user.role})`}>
               {user.email}

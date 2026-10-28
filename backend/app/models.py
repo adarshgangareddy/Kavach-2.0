@@ -73,3 +73,21 @@ class RegisterRequest(BaseModel):
 class SnippetRequest(BaseModel):
     code: str = Field(min_length=1)
     filename: str = "snippet.py"
+
+
+class AppCreate(BaseModel):
+    """A Flask app that will send runtime alerts to Kavach."""
+    name: str = Field(min_length=1, max_length=80)
+
+
+class AlertIn(BaseModel):
+    """One alert from a monitored app. Every field is bounded: the sender is not trusted."""
+    timestamp: str = Field(max_length=64)
+    endpoint: str = Field(max_length=512)
+    method: str = Field(max_length=16)
+    reason: str = Field(max_length=200)
+    client_ip: str | None = Field(None, max_length=64)
+    size_bytes: int | None = Field(None, ge=0)
+    category: Literal["sql_injection", "path_traversal"] | None = None
+    field: str | None = Field(None, max_length=128)  # which input matched, e.g. "query.id"
+    sample: str | None = Field(None, max_length=200)  # start of the matching input

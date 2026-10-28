@@ -74,6 +74,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ Encryption at rest: scan workspaces stored as AES-256-GCM archives bound to the scan ID; plaintext deleted after each scan (and on failure); existing workspaces migrated at startup (`app/vault.py`)
 - [x] ✅ CI: backend tests (Python 3.11) and frontend build on every PR
 - [x] ✅ One-command Docker setup: `docker compose up --build` (API container not published, dashboard on 127.0.0.1:8080 via nginx with security headers, data in a volume, unprivileged users, Semgrep in its own venv)
+- [x] ✅ Runtime alerts (Monitoring page): Flask apps add `telemetry/kavach_telemetry.py`, which blocks request bodies over 5 MB and checks the path, query, form and JSON inputs for SQL injection and path traversal patterns (decodes double URL encoding and SQL comments; report-only by default, `block_attacks=True` returns 403), reporting each to Kavach from a background thread; per-app keys (shown once, stored as SHA-256), `POST /alerts` intake rate-limited, alerts private per user
 - [x] ✅ "Found only by Kavach" panel on each scan: Kavach-only / both / Bandit-or-Semgrep-only groups that filter the list, and an "Only Kavach" tag on issues the other tools missed
 - [x] ✅ Regression test runner: runs only the tests affected by changed files, using the import graph (`python -m app.devtools.regress`)
 - [x] ✅ Detection regression suite: compares each target with `targets/<app>/baseline.json` and fails on missed bugs or more false positives. Active for app1, app2 and app3

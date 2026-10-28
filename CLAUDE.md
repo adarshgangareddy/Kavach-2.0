@@ -34,4 +34,5 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - Auth: backend/app/auth.py (Argon2id, JWT cookie), get_current_user in main.py, users + owner scoping in store.py; secrets in backend/.env (see .env.example)
 - Encryption at rest: backend/app/vault.py (AES-256-GCM workspaces; key from SENTINEL_DATA_KEY or .sentinel-data/vault.key)
 - L5 reporting: backend/app/report/ (severity, owasp, sarif, export), backend/app/main.py
+- Runtime alerts: telemetry/kavach_telemetry.py (client for Flask apps), /apps + /alerts in main.py, monitored_apps + alerts in store.py, frontend/src/pages/Monitor.jsx
 - Dashboard: frontend/src/

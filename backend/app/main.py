@@ -5,8 +5,10 @@ and every scan and finding is visible only to the user who created it. Another
 user's record answers 404, the same as a missing one, so ids leak nothing.
 """
 
+import hashlib
 import logging
 import os
+import secrets
 import shutil
 import sqlite3
 from contextlib import asynccontextmanager
@@ -29,7 +31,7 @@ from app.detect.registry import all_detectors
 from app.ingest import IngestError, github, upload
 from app.ingest.snippet import write_snippet
 from app.ingest.workspace import fresh_workspace, resolve_source_file, workspace_for
-from app.models import (SCAN_ID_PATTERN, LoginRequest, RegisterRequest, Scan, ScanStatus,
+from app.models import (SCAN_ID_PATTERN, AlertIn, AppCreate, LoginRequest, RegisterRequest, Scan, ScanStatus,
                         SnippetRequest, StatusUpdate)
 from app.rank.model import load_model
 from app.report import owasp, sarif
@@ -40,6 +42,8 @@ from app.store import Store
 log = logging.getLogger("zeroday_sentinel")
 LOGIN_RATE = "5/minute"
 SIGNUP_RATE = "3/minute"
+ALERT_RATE = "120/minute"
+APP_KEY_HEADER = "X-Kavach-Key"
 SIGNUP_REFUSED = "Could not create an account with these details"
 DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000"
 
@@ -231,6 +235,56 @@ def scan_snippet(body: SnippetRequest, store: StoreDep, settings: SettingsDep,
     store.save_scan(scan)
     scan = service.analyse(scan, src, store, settings)
     return {"scan": scan, "findings": store.list_findings(scan.id)}
+
+
+def _key_hash(key: str) -> str:
+    """App keys are long random tokens, so a plain SHA-256 is enough to store them safely."""
+    return hashlib.sha256(key.encode()).hexdigest()
+
+
+@app.post("/apps", status_code=201)
+def create_app(body: AppCreate, store: StoreDep, user: CurrentUser) -> dict:
+    """Register a monitored app. The key is shown once; Kavach keeps only its hash."""
+    key = "kv_" + secrets.token_urlsafe(32)
+    return store.create_app(user.id, body.name.strip(), _key_hash(key)) | {"key": key}
+
+
+@app.get("/apps")
+def list_apps(store: StoreDep, user: CurrentUser) -> list[dict]:
+    return store.list_apps(user.id)
+
+
+@app.delete("/apps/{app_id}", status_code=204)
+def delete_app(app_id: Annotated[str, PathParam(pattern=r"^A-[0-9a-f]{10}$")],
+               store: StoreDep, user: CurrentUser) -> Response:
+    if not store.delete_app(app_id, user.id):
+        raise HTTPException(404, "App not found")
+    return Response(status_code=204)
+
+
+@app.post("/alerts", status_code=202)
+@limiter.limit(ALERT_RATE)
+def receive_alert(request: Request, alert: AlertIn, store: StoreDep) -> dict:
+    """Intake for monitored apps: authenticated by the app key, not a user session."""
+    key = request.headers.get(APP_KEY_HEADER, "")
+    found = store.app_for_key(_key_hash(key)) if key else None
+    if found is None:
+        raise HTTPException(401, "Unknown app key")
+    app_id, owner_id, _ = found
+    record = store.add_alert(app_id, owner_id, alert.model_dump())
+    return {"id": record["id"]}
+
+
+@app.get("/alerts")
+def list_alerts(store: StoreDep, user: CurrentUser,
+                limit: int = Query(100, ge=1, le=500)) -> list[dict]:
+    return store.list_alerts(user.id, limit)
+
+
+@app.delete("/alerts", status_code=204)
+def clear_alerts(store: StoreDep, user: CurrentUser) -> Response:
+    store.clear_alerts(user.id)
+    return Response(status_code=204)
 
 
 @app.get("/scans", response_model=list[Scan])

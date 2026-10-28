@@ -1,5 +1,6 @@
 """SQLite persistence for users, scans and findings. Scans and findings belong to one user."""
 
+import json
 import sqlite3
 import threading
 import time
@@ -34,6 +35,22 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL,
     created_at REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS monitored_apps (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    created_at REAL NOT NULL,
+    last_seen REAL
+);
+CREATE TABLE IF NOT EXISTS alerts (
+    id TEXT PRIMARY KEY,
+    app_id TEXT NOT NULL REFERENCES monitored_apps(id) ON DELETE CASCADE,
+    owner_id TEXT NOT NULL,
+    received_at REAL NOT NULL,
+    data TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_alerts_owner ON alerts(owner_id, received_at DESC);
 """
 
 
@@ -96,6 +113,58 @@ class Store:
                          "(SELECT id FROM scans WHERE id = ? AND owner_id = ?)", (scan_id, owner_id))
             return conn.execute("DELETE FROM scans WHERE id = ? AND owner_id = ?",
                                 (scan_id, owner_id)).rowcount == 1
+
+    # monitored apps and their alerts
+
+    def create_app(self, owner_id: str, name: str, key_hash: str) -> dict:
+        app = {"id": f"A-{uuid.uuid4().hex[:10]}", "name": name, "created_at": time.time(),
+               "last_seen": None}
+        with self._conn() as conn:
+            conn.execute("INSERT INTO monitored_apps (id, owner_id, name, key_hash, created_at) "
+                         "VALUES (?, ?, ?, ?, ?)", (app["id"], owner_id, name, key_hash, app["created_at"]))
+        return app
+
+    def list_apps(self, owner_id: str) -> list[dict]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT a.id, a.name, a.created_at, a.last_seen, "
+                "(SELECT COUNT(*) FROM alerts x WHERE x.app_id = a.id) "
+                "FROM monitored_apps a WHERE owner_id = ? ORDER BY created_at DESC", (owner_id,)).fetchall()
+        return [{"id": r[0], "name": r[1], "created_at": r[2], "last_seen": r[3], "alert_count": r[4]}
+                for r in rows]
+
+    def app_for_key(self, key_hash: str) -> tuple[str, str, str] | None:
+        """(app id, owner id, app name) for a key hash, or None."""
+        with self._conn() as conn:
+            row = conn.execute("SELECT id, owner_id, name FROM monitored_apps WHERE key_hash = ?",
+                               (key_hash,)).fetchone()
+        return tuple(row) if row else None
+
+    def delete_app(self, app_id: str, owner_id: str) -> bool:
+        with self._conn() as conn:
+            conn.execute("DELETE FROM alerts WHERE app_id IN "
+                         "(SELECT id FROM monitored_apps WHERE id = ? AND owner_id = ?)", (app_id, owner_id))
+            return conn.execute("DELETE FROM monitored_apps WHERE id = ? AND owner_id = ?",
+                                (app_id, owner_id)).rowcount == 1
+
+    def add_alert(self, app_id: str, owner_id: str, alert: dict) -> dict:
+        record = {"id": f"AL-{uuid.uuid4().hex[:12]}", "received_at": time.time(), **alert}
+        with self._conn() as conn:
+            conn.execute("INSERT INTO alerts (id, app_id, owner_id, received_at, data) VALUES (?, ?, ?, ?, ?)",
+                         (record["id"], app_id, owner_id, record["received_at"], json.dumps(record)))
+            conn.execute("UPDATE monitored_apps SET last_seen = ? WHERE id = ?", (record["received_at"], app_id))
+        return record
+
+    def list_alerts(self, owner_id: str, limit: int = 100) -> list[dict]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT x.data, a.name FROM alerts x JOIN monitored_apps a ON a.id = x.app_id "
+                "WHERE x.owner_id = ? ORDER BY x.received_at DESC LIMIT ?", (owner_id, limit)).fetchall()
+        return [json.loads(r[0]) | {"app": r[1]} for r in rows]
+
+    def clear_alerts(self, owner_id: str) -> int:
+        with self._conn() as conn:
+            return conn.execute("DELETE FROM alerts WHERE owner_id = ?", (owner_id,)).rowcount
 
     def assign_unowned_scans(self, owner_id: str) -> int:
         """Give scans from before user accounts to `owner_id` (the seeded admin)."""

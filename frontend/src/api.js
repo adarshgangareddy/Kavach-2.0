@@ -47,6 +47,16 @@ export const api = {
   detectors: () => json('/detectors'),
   cweCatalog: () => json('/cwe'),
   listScans: () => json('/scans'),
+  listApps: () => json('/apps'),
+  createApp: (name) =>
+    json('/apps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }),
+  deleteApp: (id) => request(`/apps/${id}`, { method: 'DELETE' }),
+  listAlerts: () => json('/alerts'),
+  clearAlerts: () => request('/alerts', { method: 'DELETE' }),
   getScan: (id) => json(`/scans/${id}`),
   deleteScan: (id) => request(`/scans/${id}`, { method: 'DELETE' }),
   findings: (id) => json(`/scans/${id}/findings`),
