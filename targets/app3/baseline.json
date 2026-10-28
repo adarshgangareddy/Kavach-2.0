@@ -1,0 +1,13 @@
+{
+  "detector": "taint",
+  "truth": 4,
+  "caught": [
+    "app.py:36:CWE-22",
+    "helpers.py:11:CWE-78",
+    "helpers.py:16:CWE-89",
+    "helpers.py:7:CWE-22"
+  ],
+  "missed": [],
+  "false_positives": 2,
+  "findings": 6
+}

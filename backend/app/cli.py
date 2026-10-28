@@ -29,6 +29,13 @@ def _scan(args: argparse.Namespace) -> int:
     started = time.monotonic()
     root = args.path.resolve()
     filtered = filter_project(root, settings.max_file_bytes)
+    excluded = [p.strip("/") for p in args.exclude]
+    if excluded:
+        kept = [f for f in filtered.files
+                if not any(f == p or f.startswith(p + "/") for p in excluded)]
+        filtered.notes.append(f"Excluded {len(filtered.files) - len(kept)} files under "
+                              f"{', '.join(excluded)}.")
+        filtered.files = kept
     files = filtered.files
     changed = None
     if args.diff_base:
@@ -94,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     scan.add_argument("--diff-base", help="only report findings in code changed since this ref")
     scan.add_argument("--format", choices=["text", "json", "sarif"], default="text")
     scan.add_argument("--out", type=Path)
+    scan.add_argument("--exclude", action="append", default=[], metavar="DIR",
+                      help="skip files under this project-relative folder (repeatable)")
     scan.add_argument("--fail-on", type=float, default=11.0,
                       help="exit 1 if any finding has at least this severity (default: never)")
     scan.set_defaults(func=_scan)

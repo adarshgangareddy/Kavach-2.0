@@ -140,3 +140,14 @@ def test_cli_default_never_fails(repo):
     write(repo, "app/routes.py", APP_SOURCE)
     with use_detectors([MarkerDetector()]):
         assert cli.main(["scan", str(repo), "--format", "json"]) == 0
+
+
+def test_cli_exclude_skips_fixture_folders(repo, capsys):
+    write(repo, "targets/app1/app.py", APP_SOURCE)
+    write(repo, "targets_other/app.py", APP_SOURCE)  # prefix match is per folder, not per string
+    with use_detectors([MarkerDetector()]):
+        assert cli.main(["scan", str(repo), "--format", "json", "--exclude", "targets/"]) == 0
+    out = capsys.readouterr()
+    files = {f["file"] for f in json.loads(out.out)["findings"]}
+    assert files == {"targets_other/app.py"}
+    assert "Excluded 1 files under targets" in out.err

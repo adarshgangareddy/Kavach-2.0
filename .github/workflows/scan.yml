@@ -31,8 +31,9 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           SENTINEL_RULES: backend/sentinel-rules.toml
+        # targets/ holds deliberately vulnerable test fixtures for our own evaluation.
         run: >
-          sentinel scan . --diff-base "origin/$BASE_REF"
+          sentinel scan . --diff-base "origin/$BASE_REF" --exclude targets
           --format sarif --out sentinel.sarif --fail-on 7
 
       - name: Validate SARIF
