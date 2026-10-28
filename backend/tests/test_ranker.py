@@ -179,3 +179,34 @@ def test_cli_reports_missing_files_without_a_traceback(tmp_path, capsys):
                  "--truth", str(tmp_path / "truth.json"), "--project", "app1"])
     assert code == 1
     assert capsys.readouterr().err.strip() == f"error: file not found: {tmp_path / 'scan.json'}"
+
+
+@needs_sklearn
+def test_train_from_targets_command(tmp_path, monkeypatch, capsys):
+    import textwrap
+    from tests.conftest import write
+    rules = tmp_path / "rules.toml"
+    rules.write_text('entry_decorators = ["*.route"]\n[[rule]]\nid = "x"\ncwe = "CWE-78"\n'
+                     'sinks = ["store"]\nsanitizers = ["clean"]\n')
+    monkeypatch.setenv("SENTINEL_RULES", str(rules))
+    targets = tmp_path / "targets"
+    for name in ("a1", "a2"):
+        write(targets / name, "app.py", textwrap.dedent("""\
+            @app.route("/a")
+            def bad(q):
+                store(q)
+
+
+            @app.route("/b")
+            def ok(q):
+                store(clean(q))
+        """))
+        (targets / name / "truth.json").write_text(
+            json.dumps([{"file": "app.py", "line": 3, "cwe": "CWE-78"}]))
+    out, data = tmp_path / "model.json", tmp_path / "rows.jsonl"
+    assert main(["targets", "--targets", str(targets), "--out", str(out),
+                 "--save-data", str(data), "--detectors", "taint"]) == 0
+    rows = [json.loads(line) for line in data.read_text().splitlines()]
+    assert [(r["project"], r["label"]) for r in rows] == [("a1", 1), ("a1", 0), ("a2", 1), ("a2", 0)]
+    model = json.loads(out.read_text())
+    assert model["meta"]["projects"] == 2 and "taint" in model["meta"]["metrics"]["detectors"]

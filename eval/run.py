@@ -242,8 +242,15 @@ def render(apps: list[Path], tools: list[ToolScore], ablation: list[ToolScore],
                          f"| {_pct(t.precision)} | |")
         else:
             lines.append(f"| {t.name} | not run | | {t.note} |")
-    lines.append(f"| Taint + ML ranker | same as taint | same as taint | Reorders findings, "
-                 f"does not add or remove them. Ranker: {model_status} |")
+    ranked = (model.meta.get("metrics", {}) if model else {}) or {}
+    if ranked.get("false_positives_baseline") is not None:
+        ranker_note = (f"Reorders findings, does not add or remove them. On held-out apps, false "
+                       f"positives read before {_pct(ranked['recall_target'])} recall: "
+                       f"{ranked['false_positives_baseline']} -> {ranked['false_positives_model']} "
+                       f"({_pct(ranked['false_positive_reduction'])} fewer); {model_status}")
+    else:
+        ranker_note = f"Reorders findings, does not add or remove them. Ranker: {model_status}"
+    lines.append(f"| Taint + ML ranker | same as taint | same as taint | {ranker_note} |")
     lines.append("| Taint + proof runner | | | Not built yet |")
 
     if early:

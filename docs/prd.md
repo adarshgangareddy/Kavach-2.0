@@ -61,6 +61,11 @@ Try the tracer on its own: `python -m app.detect.propagation app --sink '*.write
 `ml_rank`. It never changes `severity`: findings are sorted by severity band first, and the
 ranker orders findings within a band (`priority.py`).
 
+Quickest: `cd backend && .venv/bin/python -m app.rank.train targets --out sentinel-model.json`
+scans every app in `targets/` with taint, Bandit and Semgrep, labels the findings and trains.
+
+Or step by step:
+
 1. Scan a target app, export the JSON report, and label it against the target's ground truth:
    `python -m app.rank.train label --report scan.json --truth truth.json --project app1 >> labeled.jsonl`
 2. Train: `python -m app.rank.train fit --data labeled.jsonl --out backend/sentinel-model.json`.
