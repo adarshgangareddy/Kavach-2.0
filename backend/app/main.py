@@ -16,6 +16,7 @@ from app.ingest import IngestError, github, upload
 from app.ingest.snippet import write_snippet
 from app.ingest.workspace import fresh_workspace, resolve_source_file
 from app.models import SCAN_ID_PATTERN, Scan, SnippetRequest, StatusUpdate
+from app.rank.model import load_model
 from app.report import owasp, sarif
 from app.report.export import json_report, pdf_report
 from app.schema import Finding, Status
@@ -28,6 +29,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type"],
 )
+
+def ranker_status() -> str:
+    return load_model()[1]
+
 
 ScanId = Annotated[str, PathParam(pattern=SCAN_ID_PATTERN)]
 FindingId = Annotated[str, PathParam(pattern=r"^F-[0-9a-f]{8}-\d{3,}$")]
@@ -64,7 +69,7 @@ def _scan_or_404(store: Store, scan_id: str) -> Scan:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "version": __version__}
+    return {"status": "ok", "version": __version__, "ranker": ranker_status()}
 
 
 @app.get("/detectors")

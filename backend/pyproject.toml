@@ -17,6 +17,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]
+# Training the ML ranker only. Scans score with the exported JSON weights.
+ml = ["scikit-learn>=1.5"]
 
 [project.scripts]
 sentinel = "app.cli:main"

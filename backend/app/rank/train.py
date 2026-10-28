@@ -1,0 +1,244 @@
+"""Train and evaluate the ML ranker (needs the `ml` extra: scikit-learn).
+
+    # 1. Label a scan's findings against a target app's ground truth
+    python -m app.rank.train label --report scan.json --truth truth.json --project app1 >> labeled.jsonl
+
+    # 2. Train with project-level cross-validation, write JSON weights
+    python -m app.rank.train fit --data labeled.jsonl --out sentinel-model.json
+
+labeled.jsonl: one {"project": str, "label": 0|1, "finding": {...Finding fields...}} per line.
+truth.json:    [{"file": "app/routes.py", "line": 42, "cwe": "CWE-78"}, ...]
+
+Evaluation holds out whole projects (GroupKFold), so the reported numbers are
+on projects the model never saw. "False-positive reduction" compares how many
+false positives a reviewer must read to reach a target recall when findings are
+ordered by the model versus by detector confidence alone.
+"""
+
+import argparse
+import json
+import math
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from app.rank.features import FEATURES, extract
+from app.rank.model import LinearModel
+
+BASELINE_FEATURE = FEATURES.index("detector_confidence")
+LINE_TOLERANCE = 2
+
+
+@dataclass(frozen=True)
+class Dataset:
+    X: list[list[float]]
+    y: list[int]
+    groups: list[str]
+
+    @property
+    def projects(self) -> int:
+        return len(set(self.groups))
+
+
+# --- labelling ---------------------------------------------------------------
+
+def label_findings(findings: list[dict], truth: list[dict],
+                   tolerance: int = LINE_TOLERANCE) -> list[int]:
+    """1 if a finding matches a ground-truth bug (same file and CWE, line within tolerance).
+
+    Each ground-truth bug can be claimed by at most one finding, so duplicate
+    reports of the same bug count as false positives after the first.
+    """
+    unclaimed = [dict(t) for t in truth]
+    labels = []
+    for f in sorted(findings, key=lambda f: (f.get("file", ""), f.get("line", 0))):
+        match = next((t for t in unclaimed
+                      if t.get("file") == f.get("file") and t.get("cwe") == f.get("cwe")
+                      and abs(int(t.get("line", 0)) - int(f.get("line", 0))) <= tolerance), None)
+        if match is not None:
+            unclaimed.remove(match)
+        labels.append((f, int(match is not None)))
+    order = {id(f): label for f, label in labels}
+    return [order[id(f)] for f in findings]
+
+
+def load_dataset(path: Path) -> Dataset:
+    X, y, groups = [], [], []
+    for n, line in enumerate(path.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row.get("label") not in (0, 1) or not isinstance(row.get("finding"), dict) \
+                or not row.get("project"):
+            raise ValueError(f"{path}:{n}: needs 'project', 'label' (0 or 1) and 'finding'")
+        X.append(extract(row["finding"]))
+        y.append(int(row["label"]))
+        groups.append(str(row["project"]))
+    return Dataset(X, y, groups)
+
+
+# --- metrics -----------------------------------------------------------------
+
+def false_positives_at_recall(scores: list[float], labels: list[int], recall: float) -> int | None:
+    """FPs read, in score order, before `recall` of the true issues are found."""
+    positives = sum(labels)
+    if positives == 0:
+        return None
+    needed = math.ceil(recall * positives)
+    found = fps = 0
+    for _, label in sorted(zip(scores, labels), key=lambda p: -p[0]):
+        if label:
+            found += 1
+            if found >= needed:
+                return fps
+        else:
+            fps += 1
+    return fps
+
+
+def precision_at_k(scores: list[float], labels: list[int], k: int) -> float | None:
+    if k <= 0:
+        return None
+    top = sorted(zip(scores, labels), key=lambda p: -p[0])[:k]
+    return sum(label for _, label in top) / len(top)
+
+
+def _pipeline():
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    return make_pipeline(StandardScaler(),
+                         LogisticRegression(class_weight="balanced", max_iter=1000))
+
+
+def cross_validate(data: Dataset, recall: float = 0.9) -> dict:
+    """Out-of-fold scores with whole projects held out, compared with the baseline."""
+    from sklearn.metrics import roc_auc_score
+    from sklearn.model_selection import GroupKFold
+
+    if data.projects < 2:
+        raise ValueError("need findings from at least 2 projects for a project-level split")
+    oof: list[float | None] = [None] * len(data.y)
+    skipped = 0
+    for train_idx, test_idx in GroupKFold(n_splits=min(5, data.projects)).split(
+            data.X, data.y, data.groups):
+        y_train = [data.y[i] for i in train_idx]
+        if len(set(y_train)) < 2:
+            skipped += 1
+            continue
+        model = _pipeline().fit([data.X[i] for i in train_idx], y_train)
+        for i, p in zip(test_idx, model.predict_proba([data.X[i] for i in test_idx])[:, 1]):
+            oof[i] = float(p)
+
+    kept = [i for i, p in enumerate(oof) if p is not None]
+    labels = [data.y[i] for i in kept]
+    model_scores = [oof[i] for i in kept]
+    base_scores = [data.X[i][BASELINE_FEATURE] for i in kept]
+    fp_model = false_positives_at_recall(model_scores, labels, recall)
+    fp_base = false_positives_at_recall(base_scores, labels, recall)
+    both_classes = len(set(labels)) == 2
+    return {
+        "projects": data.projects,
+        "findings": len(data.y),
+        "evaluated_findings": len(kept),
+        "real_issues": sum(labels),
+        "skipped_folds": skipped,
+        "recall_target": recall,
+        "auc_model": round(roc_auc_score(labels, model_scores), 3) if both_classes else None,
+        "auc_baseline": round(roc_auc_score(labels, base_scores), 3) if both_classes else None,
+        "false_positives_model": fp_model,
+        "false_positives_baseline": fp_base,
+        "false_positive_reduction": (round(1 - fp_model / fp_base, 3)
+                                     if fp_model is not None and fp_base else None),
+        "precision_at_k_model": precision_at_k(model_scores, labels, sum(labels)),
+        "precision_at_k_baseline": precision_at_k(base_scores, labels, sum(labels)),
+    }
+
+
+def fit(data: Dataset, metrics: dict | None = None) -> LinearModel:
+    """Train on all data and export the weights as a LinearModel."""
+    pipe = _pipeline().fit(data.X, data.y)
+    scaler, clf = pipe[0], pipe[-1]
+    return LinearModel(
+        mean=tuple(float(v) for v in scaler.mean_),
+        scale=tuple(float(v) for v in scaler.scale_),
+        coef=tuple(float(v) for v in clf.coef_[0]),
+        intercept=float(clf.intercept_[0]),
+        meta={"projects": data.projects, "findings": len(data.y),
+              "real_issues": sum(data.y), "metrics": metrics or {}},
+    )
+
+
+# --- CLI ---------------------------------------------------------------------
+
+def _report(metrics: dict) -> str:
+    def pct(v):
+        return "n/a" if v is None else f"{v:.0%}"
+    lines = [
+        f"Evaluated on held-out projects: {metrics['projects']} projects, "
+        f"{metrics['evaluated_findings']} findings, {metrics['real_issues']} real issues.",
+        f"To reach {pct(metrics['recall_target'])} recall a reviewer reads "
+        f"{metrics['false_positives_model']} false positives with the model vs "
+        f"{metrics['false_positives_baseline']} with detector confidence "
+        f"(reduction {pct(metrics['false_positive_reduction'])}).",
+        f"Precision@k: model {pct(metrics['precision_at_k_model'])}, "
+        f"baseline {pct(metrics['precision_at_k_baseline'])}.  "
+        f"AUC: model {metrics['auc_model']}, baseline {metrics['auc_baseline']}.",
+    ]
+    if metrics["projects"] < 10 or metrics["findings"] < 200:
+        lines.append("Caveat: small sample. Treat these numbers as indicative, not conclusive.")
+    if metrics["skipped_folds"]:
+        lines.append(f"Note: {metrics['skipped_folds']} folds skipped (one class only in training).")
+    return "\n".join(lines)
+
+
+def _cmd_label(args) -> int:
+    report = json.loads(args.report.read_text())
+    findings = report["findings"] if isinstance(report, dict) else report
+    truth = json.loads(args.truth.read_text())
+    labels = label_findings(findings, truth)
+    for finding, label in zip(findings, labels):
+        print(json.dumps({"project": args.project, "label": label, "finding": finding}))
+    matched = sum(labels)
+    print(f"labelled {len(findings)} findings: {matched} real, "
+          f"{len(truth) - matched} ground-truth bugs not found", file=sys.stderr)
+    return 0
+
+
+def _cmd_fit(args) -> int:
+    data = load_dataset(args.data)
+    metrics = cross_validate(data, args.recall)
+    print(_report(metrics))
+    model = fit(data, metrics)
+    args.out.write_text(json.dumps(model.to_dict(), indent=2) + "\n")
+    print(f"wrote {args.out}", file=sys.stderr)
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(prog="python -m app.rank.train")
+    sub = p.add_subparsers(dest="command", required=True)
+    lab = sub.add_parser("label", help="label a scan report against ground truth")
+    lab.add_argument("--report", type=Path, required=True, help="JSON report or findings list")
+    lab.add_argument("--truth", type=Path, required=True)
+    lab.add_argument("--project", required=True)
+    lab.set_defaults(func=_cmd_label)
+    fitp = sub.add_parser("fit", help="cross-validate by project, then train and save")
+    fitp.add_argument("--data", type=Path, required=True)
+    fitp.add_argument("--out", type=Path, default=Path("sentinel-model.json"))
+    fitp.add_argument("--recall", type=float, default=0.9)
+    fitp.set_defaults(func=_cmd_fit)
+    args = p.parse_args(argv)
+    try:
+        return args.func(args)
+    except FileNotFoundError as exc:
+        print(f"error: file not found: {exc.filename}", file=sys.stderr)
+    except json.JSONDecodeError as exc:
+        print(f"error: not valid JSON ({exc})", file=sys.stderr)
+    except (KeyError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -15,7 +15,7 @@ SQL injection (CWE-89) and path traversal (CWE-22).
 |---|---|---|
 | L1 Ingestion | Zip/GitHub upload, snippet scan, diff reader, file filter | Built |
 | L2 Detection | Call graph, taint engine, wrapper discovery | Built (`detect/propagation.py`, `detect/taint.py`). **Sink lists in `backend/sentinel-rules.toml` still to be filled in by the team** |
-| L2 ML ranker | Rank findings by likelihood of being real | Not built |
+| L2 ML ranker | Rank findings by likelihood of being real | Built (`app/rank/`); needs labelled data from the seeded targets to train |
 | L2 Rule layer | Baseline rules | Bandit and Semgrep adapters built |
 | L3 Early detection | Pre-commit hook, PR scan Action, incremental cache | Built. Fix-watcher (stretch) not started |
 | L4 Verification | Confidence tiers, fix suggestions | Tiers and remediation guidance built. Proof runner, patch diff and re-test not built |
@@ -54,6 +54,21 @@ and low confidence. The detector is whole-program: the commit hook and the PR sc
 every project file, and keep a finding when its path passes through changed code.
 
 Try the tracer on its own: `python -m app.detect.propagation app --sink '*.write_text'`
+
+## ML ranker
+
+`backend/app/rank/` scores each finding with the probability that it is a real issue, stored in
+`ml_rank`. It never changes `severity`: findings are sorted by severity band first, and the
+ranker orders findings within a band (`priority.py`).
+
+1. Scan a target app, export the JSON report, and label it against the target's ground truth:
+   `python -m app.rank.train label --report scan.json --truth truth.json --project app1 >> labeled.jsonl`
+2. Train: `python -m app.rank.train fit --data labeled.jsonl --out backend/sentinel-model.json`.
+   It prints the false-positive reduction measured on held-out projects.
+
+Training needs `pip install -e "backend[ml]"` (scikit-learn). The model is saved as JSON weights,
+not a pickle, because loading a pickle can run code. Scans read the JSON with plain Python. Without
+a model file, `ml_rank` is the detector's confidence. `GET /health` reports which mode is active.
 
 ## Adding another detector
 

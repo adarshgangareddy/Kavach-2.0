@@ -80,6 +80,8 @@ def no_detectors():
 @pytest.fixture(autouse=True)
 def isolated_data(tmp_path, monkeypatch):
     monkeypatch.setenv("SENTINEL_DATA", str(tmp_path / "data"))
+    # Never let a real trained model on disk change test results.
+    monkeypatch.setenv("SENTINEL_MODEL", str(tmp_path / "no-model.json"))
     return tmp_path / "data"
 
 

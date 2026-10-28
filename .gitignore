@@ -10,6 +10,7 @@ venv/
 backend/.sentinel-data/
 .sentinel-cache.json
 *.sarif
+labeled*.jsonl
 
 # Secrets
 .env

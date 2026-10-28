@@ -5,6 +5,8 @@ from collections import Counter
 from pathlib import Path
 
 from app.detect.base import Candidate, Detector, is_whole_program
+from app.rank import model as ranker
+from app.rank.priority import sort_by_priority
 from app.report import owasp, severity
 from app.schema import DetectedAt, Finding
 
@@ -62,7 +64,7 @@ def to_finding(cand: Candidate, finding_id: str, scan_id: str, *,
         id=finding_id, scan_id=scan_id, file=cand.file, line=cand.line,
         cwe=cand.cwe, owasp=owasp.owasp_for(cand.cwe),
         source=cand.source, sink=cand.sink, path=cand.path, detector=cand.detector,
-        # Placeholder until the ML ranker lands: rank by detector confidence.
+        # Detector confidence until the ML ranker (if a model is trained) rescores it.
         ml_rank=cand.confidence,
         severity=sev, severity_factors=factors,
         confidence_tier=cand.confidence_tier,
@@ -82,7 +84,7 @@ def build_findings(scan_id: str, candidates: list[Candidate], *, started: float,
                    introduced_in=introduced_in, elapsed_s=elapsed)
         for i, c in enumerate(deduplicate(candidates), start=1)
     ]
-    return sorted(findings, key=lambda f: (-f.severity, f.file, f.line))
+    return sort_by_priority(ranker.apply(findings))
 
 
 def severity_counts(findings: list[Finding]) -> dict[str, int]:

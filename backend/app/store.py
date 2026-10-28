@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from app.models import Scan
+from app.rank.priority import sort_by_priority
 from app.schema import Finding, Status
 
 _SCHEMA = """
@@ -88,10 +89,10 @@ class Store:
         if min_severity is not None:
             sql += " AND severity >= ?"
             args.append(min_severity)
-        sql += " ORDER BY severity DESC, id"
+        sql += " ORDER BY id"
         with self._conn() as conn:
             rows = conn.execute(sql, args).fetchall()
-        return [Finding.model_validate_json(r[0]) for r in rows]
+        return sort_by_priority(Finding.model_validate_json(r[0]) for r in rows)
 
     def get_finding(self, finding_id: str) -> Finding | None:
         with self._conn() as conn:

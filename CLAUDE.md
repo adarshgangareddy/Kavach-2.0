@@ -1,6 +1,7 @@
 # ZeroDay Sentinel
 
 Flask vulnerability scanner for Hack Fest 2026 PS-01. Read docs/prd.md first.
+Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or started.
 
 ## Rules
 - Every layer reads and writes the Finding record in backend/app/schema.py. Do not change it without asking.
@@ -22,6 +23,7 @@ Flask vulnerability scanner for Hack Fest 2026 PS-01. Read docs/prd.md first.
 - L1 ingestion: backend/app/ingest/
 - L2 detection plug-in point: backend/app/detect/base.py (Detector, Candidate), registry.py
 - L2 taint: backend/app/detect/propagation.py (ast tracer), taint.py (detector), rules in backend/sentinel-rules.toml
+- L2 ranking: backend/app/rank/ (features, JSON model, train.py, priority sort)
 - L3 early detection: backend/app/early/ (incremental.py, hook.py, scope.py), backend/app/cli.py
 - L5 reporting: backend/app/report/ (severity, owasp, sarif, export), backend/app/main.py
 - Dashboard: frontend/src/
