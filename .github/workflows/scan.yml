@@ -6,7 +6,8 @@ on:
 # pull_request (not pull_request_target): fork PRs get a read-only token and no secrets.
 permissions:
   contents: read
-  security-events: write
+  actions: read          # upload-sarif reads the workflow run
+  security-events: write # upload-sarif writes code-scanning results
 
 jobs:
   scan:
@@ -38,9 +39,25 @@ jobs:
         if: always()
         run: sentinel validate-sarif sentinel.sarif
 
+      # Annotations appear on the PR's changed lines and need no extra GitHub features.
+      - name: Annotate pull request
+        if: always()
+        run: sentinel annotate sentinel.sarif
+
+      - name: Keep SARIF as an artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sentinel-sarif
+          path: sentinel.sarif
+          if-no-files-found: ignore
+
+      # Code scanning on a private repository needs GitHub Advanced Security.
+      # Without it this upload fails, which must not fail the check.
       - name: Upload results to code scanning
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: sentinel.sarif
           category: zeroday-sentinel

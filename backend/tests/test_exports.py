@@ -67,3 +67,25 @@ def test_json_and_pdf_reports():
     assert report["summary"]["total"] == 4 and report["summary"]["by_cwe"]["CWE-89"] == 2
     pdf = pdf_report(_scan().model_copy(update={"notes": ["Skipped 3 files → ok"]}), findings)
     assert pdf.startswith(b"%PDF") and len(pdf) > 1000
+
+
+def test_github_annotations_from_sarif():
+    from app.report.annotations import annotations
+    findings = _findings()
+    findings[1] = findings[1].model_copy(update={"status": Status.ACCEPTED})
+    lines = annotations(sarif.to_sarif(None, findings))
+    assert len(lines) == len(findings) - 1  # accepted risk is suppressed
+    first = lines[0]
+    assert first.startswith("::error file=app/routes.py,line=6,title=CWE-78 OS command injection::")
+    assert "%0AFix: " in first and "\n" not in first
+    assert lines[-1].startswith("::notice ")
+
+
+def test_annotation_escaping():
+    from app.report.annotations import annotations
+    doc = {"runs": [{"tool": {"driver": {"rules": []}}, "results": [{
+        "ruleId": "R", "level": "warning", "message": {"text": "50% done\nnext"},
+        "locations": [{"physicalLocation": {"artifactLocation": {"uri": "a,b:c.py"},
+                                            "region": {"startLine": 3}}}]}]}]}
+    [line] = annotations(doc)
+    assert line == "::warning file=a%2Cb%3Ac.py,line=3,title=R::50%25 done%0Anext"

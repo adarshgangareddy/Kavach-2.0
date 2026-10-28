@@ -18,6 +18,7 @@ from app.ingest.filter import filter_project
 from app.models import Scan, ScanStatus
 from app.pipeline import build_findings, run_detectors, severity_counts
 from app.report import sarif
+from app.report.annotations import annotations
 from app.report.export import json_report
 from app.report.text import render
 from app.schema import DetectedAt
@@ -77,6 +78,14 @@ def _validate(args: argparse.Namespace) -> int:
     return 1 if errors else 0
 
 
+def _annotate(args: argparse.Namespace) -> int:
+    lines = annotations(json.loads(args.file.read_text()))
+    for line in lines:
+        print(line)
+    print(f"sentinel: {len(lines)} annotations", file=sys.stderr)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="sentinel")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -91,6 +100,9 @@ def main(argv: list[str] | None = None) -> int:
     val = sub.add_parser("validate-sarif", help="check a SARIF file's structure")
     val.add_argument("file", type=Path)
     val.set_defaults(func=_validate)
+    ann = sub.add_parser("annotate", help="print GitHub Actions annotations for a SARIF file")
+    ann.add_argument("file", type=Path)
+    ann.set_defaults(func=_annotate)
     args = parser.parse_args(argv)
     return args.func(args)
 
