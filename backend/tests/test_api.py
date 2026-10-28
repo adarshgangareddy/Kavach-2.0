@@ -6,13 +6,13 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.report.sarif import validate
-from tests.conftest import APP_SOURCE, BrokenDetector, MarkerDetector
+from tests.conftest import APP_SOURCE, BrokenDetector, MarkerDetector, signed_in_client
 from app.detect.registry import use_detectors
 
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    return signed_in_client()
 
 
 def _zip_bytes() -> bytes:

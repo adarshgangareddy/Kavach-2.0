@@ -10,6 +10,9 @@ dashboard. See [docs/prd.md](docs/prd.md) for the design and
 
 ### Quick start
 
+First copy `backend/.env.example` to `backend/.env` and fill in `SENTINEL_JWT_SECRET` and the admin
+email and password. The admin account is created on startup; sign in with it on the dashboard.
+
 ```bash
 cd backend
 python3 -m venv .venv
@@ -80,6 +83,16 @@ GitHub code scanning, so findings appear on the changed lines.
 | GET | `/scans/{id}/sarif` | SARIF 2.1.0 |
 
 ### Security notes
+
+- Sign-in: passwords are hashed with Argon2id (argon2-cffi, random salt per hash). A successful
+  login sets a short-lived (30 min) HS256 JWT in an `HttpOnly`, `SameSite=Lax` cookie, `Secure`
+  unless `SENTINEL_COOKIE_SECURE=false`. Failed logins always answer "Invalid email or password",
+  and unknown emails cost the same Argon2 work. Logins are limited to 5 per minute per IP (slowapi).
+- Every route except `/health` and `/auth/login` needs a session. Scans and findings belong to the
+  user who created them; another user's record answers 404, exactly like a missing one.
+- Sign-up creates normal (non-admin) accounts: 12-128 character passwords, 3 sign-ups per minute
+  per IP, and `SENTINEL_ALLOW_SIGNUP=false` turns it off for admin-created accounts only.
+- Secrets come from the environment or `backend/.env` (git-ignored); nothing is hard-coded.
 - Zip uploads are capped at 50 MB and 200 MB unpacked. Paths that escape the folder
   (zip slip), absolute paths and symlinks are rejected.
 - GitHub ingestion accepts only `https://github.com/owner/repo` URLs. Clones are shallow,

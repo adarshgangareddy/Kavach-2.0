@@ -1,10 +1,19 @@
-"""Runtime limits and paths. Override with SENTINEL_* environment variables."""
+"""Runtime limits and paths. Override with SENTINEL_* environment variables.
+
+Secrets (JWT key, admin credentials, data key) come from the environment or from
+backend/.env, which is git-ignored. Real environment variables win over .env.
+"""
 
 import os
 from dataclasses import dataclass
 from pathlib import Path
 
-_DEFAULT_DATA = Path(__file__).resolve().parents[1] / ".sentinel-data"
+from dotenv import load_dotenv
+
+_BACKEND = Path(__file__).resolve().parents[1]
+_DEFAULT_DATA = _BACKEND / ".sentinel-data"
+
+load_dotenv(_BACKEND / ".env", override=False)
 
 
 @dataclass(frozen=True)

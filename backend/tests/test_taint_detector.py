@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.detect.registry import use_detectors
 from app.detect.taint import RulesError, TaintDetector, load_rules
 from app.main import app
-from tests.conftest import write
+from tests.conftest import write, signed_in_client
 
 RULES = """
 entry_decorators = ["*.route"]
@@ -142,7 +142,7 @@ def test_end_to_end_scores_and_api(rules_file, project, tmp_path):
     with zipfile.ZipFile(buf, "w") as zf:
         for path in project.rglob("*.py"):
             zf.write(path, path.relative_to(project).as_posix())
-    client = TestClient(app)
+    client = signed_in_client()
     with use_detectors([TaintDetector()]):
         scan = client.post("/scans", files={"file": ("p.zip", buf.getvalue(), "application/zip")}).json()
     findings = client.get(f"/scans/{scan['id']}/findings").json()

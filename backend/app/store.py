@@ -1,10 +1,13 @@
-"""SQLite persistence for scans and findings."""
+"""SQLite persistence for users, scans and findings. Scans and findings belong to one user."""
 
 import sqlite3
 import threading
+import time
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from app.auth import User
 from app.models import Scan
 from app.rank.priority import sort_by_priority
 from app.schema import Finding, Status
@@ -24,6 +27,13 @@ CREATE TABLE IF NOT EXISTS findings (
     data TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_findings_scan ON findings(scan_id, severity DESC);
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
 """
 
 
@@ -34,6 +44,10 @@ class Store:
         self._lock = threading.Lock()
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
+            columns = {row[1] for row in conn.execute("PRAGMA table_info(scans)")}
+            if "owner_id" not in columns:  # databases from before user accounts
+                conn.execute("ALTER TABLE scans ADD COLUMN owner_id TEXT")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_scans_owner ON scans(owner_id, created_at)")
 
     @contextmanager
     def _conn(self):
@@ -46,25 +60,73 @@ class Store:
             finally:
                 conn.close()
 
+    # users
+
+    @staticmethod
+    def _user(row) -> User | None:
+        return User(row[0], row[1], row[2]) if row else None
+
+    def create_user(self, email: str, password_hash: str, role: str = "user") -> User:
+        user = User(f"U-{uuid.uuid4().hex[:12]}", email, role)
+        with self._conn() as conn:
+            conn.execute("INSERT INTO users (id, email, password_hash, role, created_at) "
+                         "VALUES (?, ?, ?, ?, ?)", (user.id, email, password_hash, role, time.time()))
+        return user
+
+    def get_user(self, user_id: str) -> User | None:
+        with self._conn() as conn:
+            row = conn.execute("SELECT id, email, role FROM users WHERE id = ?", (user_id,)).fetchone()
+        return self._user(row)
+
+    def get_user_by_email(self, email: str) -> tuple[User, str] | tuple[None, None]:
+        """(user, password hash) or (None, None)."""
+        with self._conn() as conn:
+            row = conn.execute("SELECT id, email, role, password_hash FROM users WHERE email = ?",
+                               (email,)).fetchone()
+        return (self._user(row[:3]), row[3]) if row else (None, None)
+
+    def set_password_hash(self, user_id: str, password_hash: str) -> None:
+        with self._conn() as conn:
+            conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+
+    def assign_unowned_scans(self, owner_id: str) -> int:
+        """Give scans from before user accounts to `owner_id` (the seeded admin)."""
+        with self._conn() as conn:
+            return conn.execute("UPDATE scans SET owner_id = ? WHERE owner_id IS NULL",
+                                (owner_id,)).rowcount
+
+    # scans: every read takes the caller's user id; None means internal, unscoped access
+
     def save_scan(self, scan: Scan) -> None:
         with self._conn() as conn:
             conn.execute(
-                "INSERT INTO scans (id, created_at, data) VALUES (?, ?, ?) "
+                "INSERT INTO scans (id, created_at, data, owner_id) VALUES (?, ?, ?, ?) "
                 "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
-                (scan.id, scan.created_at, scan.model_dump_json()),
+                (scan.id, scan.created_at, scan.model_dump_json(), scan.owner_id),
             )
 
-    def get_scan(self, scan_id: str) -> Scan | None:
-        with self._conn() as conn:
-            row = conn.execute("SELECT data FROM scans WHERE id = ?", (scan_id,)).fetchone()
-        return Scan.model_validate_json(row[0]) if row else None
+    def _scan(self, row) -> Scan | None:
+        if not row:
+            return None
+        scan = Scan.model_validate_json(row[0])
+        scan.owner_id = row[1]
+        return scan
 
-    def list_scans(self, limit: int = 50) -> list[Scan]:
+    def get_scan(self, scan_id: str, owner_id: str | None = None) -> Scan | None:
+        sql, args = "SELECT data, owner_id FROM scans WHERE id = ?", [scan_id]
+        if owner_id is not None:
+            sql += " AND owner_id = ?"
+            args.append(owner_id)
+        with self._conn() as conn:
+            return self._scan(conn.execute(sql, args).fetchone())
+
+    def list_scans(self, owner_id: str, limit: int = 50) -> list[Scan]:
         with self._conn() as conn:
             rows = conn.execute(
-                "SELECT data FROM scans ORDER BY created_at DESC LIMIT ?", (limit,)
+                "SELECT data, owner_id FROM scans WHERE owner_id = ? ORDER BY created_at DESC LIMIT ?",
+                (owner_id, limit),
             ).fetchall()
-        return [Scan.model_validate_json(r[0]) for r in rows]
+        return [self._scan(r) for r in rows]
 
     def replace_findings(self, scan_id: str, findings: list[Finding]) -> None:
         with self._conn() as conn:
@@ -94,13 +156,19 @@ class Store:
             rows = conn.execute(sql, args).fetchall()
         return sort_by_priority(Finding.model_validate_json(r[0]) for r in rows)
 
-    def get_finding(self, finding_id: str) -> Finding | None:
+    def get_finding(self, finding_id: str, owner_id: str | None = None) -> Finding | None:
+        sql = "SELECT f.data FROM findings f JOIN scans s ON s.id = f.scan_id WHERE f.id = ?"
+        args = [finding_id]
+        if owner_id is not None:
+            sql += " AND s.owner_id = ?"
+            args.append(owner_id)
         with self._conn() as conn:
-            row = conn.execute("SELECT data FROM findings WHERE id = ?", (finding_id,)).fetchone()
+            row = conn.execute(sql, args).fetchone()
         return Finding.model_validate_json(row[0]) if row else None
 
-    def update_status(self, finding_id: str, status: Status) -> Finding | None:
-        finding = self.get_finding(finding_id)
+    def update_status(self, finding_id: str, status: Status,
+                      owner_id: str | None = None) -> Finding | None:
+        finding = self.get_finding(finding_id, owner_id)
         if finding is None:
             return None
         finding = finding.model_copy(update={"status": status})

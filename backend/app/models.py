@@ -5,7 +5,9 @@ import uuid
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.schema import Status
 
@@ -32,10 +34,40 @@ class Scan(BaseModel):
     error: str | None = None
     finding_count: int = 0
     severity_counts: dict[str, int] = Field(default_factory=dict)
+    owner_id: str | None = Field(default=None, exclude=True)  # stored, never sent to clients
 
 
 class StatusUpdate(BaseModel):
     status: Status
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=1024)
+
+
+_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
+MIN_PASSWORD = 12
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(max_length=254)
+    password: str = Field(min_length=MIN_PASSWORD, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def _email_shape(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not _EMAIL.match(value):
+            raise ValueError("Enter a valid email address")
+        return value
+
+    @model_validator(mode="after")
+    def _password_not_email(self):
+        local = self.email.split("@")[0]
+        if self.password.lower() in {self.email, local} or len(set(self.password)) < 4:
+            raise ValueError("Choose a password that is not your email and not a repeated character")
+        return self
 
 
 class SnippetRequest(BaseModel):

@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from app import vault
 from app.config import get_settings
 from app.main import app
-from tests.conftest import APP_SOURCE, write
+from tests.conftest import APP_SOURCE, write, signed_in_client
 
 SECRET_MARKER = "UNIQUE_SOURCE_MARKER_7f3a"
 
@@ -114,7 +114,7 @@ def _zip(files):
 
 
 def test_api_scan_is_stored_encrypted_and_viewer_still_works(marker, settings):
-    client = TestClient(app)
+    client = signed_in_client()
     body = _zip({"demo/app/routes.py": APP_SOURCE + f"\n# {SECRET_MARKER}\n", "demo/.env": "TOKEN=x\n"})
     scan = client.post("/scans", files={"file": ("demo.zip", body, "application/zip")}).json()
     workspace = settings.workspaces / scan["id"]
@@ -133,7 +133,7 @@ def test_api_scan_is_stored_encrypted_and_viewer_still_works(marker, settings):
 
 
 def test_failed_scan_leaves_no_plaintext(marker, settings):
-    client = TestClient(app)
+    client = signed_in_client()
     scan = client.post("/scans", files={"file": ("x.zip", b"not a zip", "application/zip")}).json()
     assert client.get(f"/scans/{scan['id']}").json()["status"] == "failed"
     workspace = settings.workspaces / scan["id"]
@@ -141,7 +141,7 @@ def test_failed_scan_leaves_no_plaintext(marker, settings):
 
 
 def test_snippet_scan_is_sealed(marker, settings):
-    client = TestClient(app)
+    client = signed_in_client()
     body = client.post("/snippet", json={"code": f"x = 1  # {SECRET_MARKER}\n", "filename": "s.py"}).json()
     sid = body["scan"]["id"]
     assert vault.is_sealed(sid, settings) and not (settings.workspaces / sid / "src").exists()

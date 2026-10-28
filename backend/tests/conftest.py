@@ -84,7 +84,28 @@ def isolated_data(tmp_path, monkeypatch):
     monkeypatch.setenv("SENTINEL_MODEL", str(tmp_path / "no-model.json"))
     # Never encrypt test data with a real key from the environment.
     monkeypatch.delenv("SENTINEL_DATA_KEY", raising=False)
+    # Test-only auth settings: a fixed signing key and a seeded admin, plain HTTP cookies.
+    monkeypatch.setenv("SENTINEL_JWT_SECRET", "test-only-signing-key-0123456789abcdef")
+    monkeypatch.setenv("SENTINEL_ADMIN_EMAIL", ADMIN_EMAIL)
+    monkeypatch.setenv("SENTINEL_ADMIN_PASSWORD", ADMIN_PASSWORD)
+    monkeypatch.setenv("SENTINEL_COOKIE_SECURE", "false")
+    from app.main import limiter
+    limiter.reset()
     return tmp_path / "data"
+
+
+ADMIN_EMAIL = "admin@example.test"
+ADMIN_PASSWORD = "test-admin-password-not-real"
+
+
+def signed_in_client(email: str = ADMIN_EMAIL, password: str = ADMIN_PASSWORD):
+    """A TestClient holding a valid session cookie."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    client = TestClient(app)
+    res = client.post("/auth/login", json={"email": email, "password": password})
+    assert res.status_code == 200, res.text
+    return client
 
 
 def write(root: Path, rel: str, text: str) -> Path:
