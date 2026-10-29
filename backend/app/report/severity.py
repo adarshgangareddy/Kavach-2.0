@@ -19,6 +19,7 @@ BASE_SCORE: dict[str, float] = {
     "CWE-295": 4.0,  # certificate checks off
     "CWE-326": 3.5,  # key too short
     "CWE-330": 3.5,  # predictable random values
+    "CWE-1395": 5.0,  # vulnerable third-party component (fix-watcher)
 }
 DEFAULT_BASE = 3.0
 

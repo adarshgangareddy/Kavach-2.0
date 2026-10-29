@@ -105,8 +105,21 @@ const CODE_PROBLEMS = {
   'CWE-330': 'Values from the random module can be predicted by an attacker.',
 }
 
+/** Fix-watcher leads: a dependency with published security fixes, imported by this code. */
+export const isAdvisory = (f) => f?.detected_at === 'watch'
+
+/** Plain text with its https links made clickable (advisory pages in the fix advice). */
+export function LinkedText({ text }) {
+  return text.split(/(https:\/\/[^\s)]+)/g).map((part, i) => (
+    /^https:\/\//.test(part)
+      ? <a key={i} href={part} target="_blank" rel="noreferrer noopener">{part.replace(/^https:\/\//, '')}</a>
+      : part
+  ))
+}
+
 /** One plain-English sentence: what the finding means. */
 export function plainSummary(f) {
+  if (isAdvisory(f)) return `${f.sink}. This file imports it, so those fixes may matter here.`
   if (CODE_PROBLEMS[f.cwe]) {
     const what = f.sink.includes(' ') ? f.sink : `${f.detector} flagged this line (${f.sink})`  // tool ids have no spaces
     return `${what}. ${CODE_PROBLEMS[f.cwe]}`

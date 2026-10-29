@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, severityLabel, SEVERITY_ORDER, STATUSES } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
-import { BarChart, ConfirmDelete, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary, severityRows } from '../components.jsx'
+import { BarChart, ConfirmDelete, ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, isAdvisory, plainSummary, severityRows } from '../components.jsx'
 import CallGraphPanel from '../components/CallGraphPanel.jsx'
 import CountUp from '../components/CountUp.jsx'
 import SeverityViz from '../components/SeverityViz.jsx'
@@ -46,7 +46,7 @@ const BASELINES = ['bandit', 'semgrep']
 function foundBy(f) {
   const parts = f.detector.split('+')
   return {
-    kavach: parts.some((d) => d.startsWith('taint')),
+    kavach: parts.some((d) => d.startsWith('taint') || d === 'rules' || d === 'fixwatch'),  // Kavach's own engines
     bandit: parts.includes('bandit'),
     semgrep: parts.includes('semgrep'),
   }
@@ -141,6 +141,7 @@ function FindingCard({ f, catalog }) {
             {cweTitle(catalog, f.cwe)}
             {foundGroup(f) === 'kavach-only' && <span className="pill only-kavach">Only Kavach</span>}
             {isProven(f) && <VerifiedBadge small />}
+            {isAdvisory(f) && <span className="pill advisory">Advisory</span>}
           </strong>
           <span className="mono small">{f.file}:{f.line}</span>
           <span className="muted small">{plainSummary(f)}</span>

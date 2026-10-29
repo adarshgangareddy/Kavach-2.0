@@ -14,6 +14,7 @@ OWASP_BY_CWE: dict[str, str] = {
     "CWE-326": "A02:2021 Cryptographic Failures",
     "CWE-916": "A02:2021 Cryptographic Failures",
     "CWE-295": "A07:2021 Identification and Authentication Failures",
+    "CWE-1395": "A06:2021 Vulnerable and Outdated Components",
     "CWE-798": "A07:2021 Identification and Authentication Failures",
     "CWE-259": "A07:2021 Identification and Authentication Failures",
     "CWE-502": "A08:2021 Software and Data Integrity Failures",
@@ -37,6 +38,7 @@ CWE_TITLES: dict[str, str] = {
     "CWE-326": "Key too short",
     "CWE-916": "Password hash too fast",
     "CWE-295": "Certificate checks turned off",
+    "CWE-1395": "Vulnerable dependency",
     "CWE-502": "Deserialization of untrusted data",
     "CWE-605": "Multiple binds to the same port",
     "CWE-703": "Improper check of exceptional conditions",
@@ -62,6 +64,7 @@ REMEDIATION: dict[str, str] = {
     "CWE-295": "Keep certificate verification on; pass a CA bundle for private certificates.",
     "CWE-326": "Use RSA or DSA keys of at least 2048 bits, or an elliptic curve key.",
     "CWE-330": "Use the secrets module (secrets.token_urlsafe, secrets.choice) for security values.",
+    "CWE-1395": "Upgrade the package to a version that contains the security fix, then run your tests.",
 }
 REMEDIATION["CWE-77"] = REMEDIATION["CWE-78"]
 REMEDIATION["CWE-23"] = REMEDIATION["CWE-22"]

@@ -19,6 +19,7 @@ import string
 from dataclasses import dataclass, field
 
 SQL, COMMAND, PATH = "CWE-89", "CWE-78", "CWE-22"
+UPGRADE = "CWE-1395"  # fix-watcher leads point at an import on purpose: the fix is an upgrade
 
 SQL_METHODS = {"execute", "executemany"}
 SUBPROCESS = {"subprocess.run", "subprocess.call", "subprocess.check_call", "subprocess.check_output",
@@ -102,7 +103,8 @@ def suggest_patch(source: str, file: str, line: int, cwe: str) -> Patch:
         return Patch(False, cwe, reason=f"Automatic patches do not cover {cwe} yet; it has written advice only.")
     try:
         tree = ast.parse(source)
-        _refuse_import_line(tree, line)
+        if cwe != UPGRADE:
+            _refuse_import_line(tree, line)
         plan = PLANNERS[cwe](tree, line, source)
         patched = _apply(source, tree, plan)
         ast.parse(patched)  # never hand back code that does not parse

@@ -44,7 +44,7 @@ Tracks every feature in the PRD (`docs/prd.md`). Updated whenever a feature is f
 - [x] ✅ **Incremental cache:** re-scans only changed files; the whole-program taint detector always sees every file
 - [x] ✅ **PR scan (GitHub Action):** scans the PR diff, annotates changed lines, keeps SARIF as an artifact, uploads to code scanning when available
 - [x] ✅ **Write-time watcher (`sentinel watch`):** polls git every second, records added/modified/removed functions vs HEAD in `.git/sentinel-status.json`; `--scan` prints findings in changed functions as you save (`detected_at: write`)
-- [ ] ⬜ **Fix-watcher (stretch):** watch dependency fixes for patterns that may apply to the project
+- [x] ✅ **Fix-watcher (`app/fixwatch/`):** exact pins from requirements*.txt / pyproject.toml checked against OSV (online, parallel, cached 1 h) or an offline OSV export; a finding (CWE-1395, `detected_at: watch`) only when the code imports the package, on that import line, with the upgrade target and advisory links. Off unless SENTINEL_FIXWATCH is set; on in Docker. Dashboard: Advisory label, clickable advisory links, dependency → used-here path, kept out of the call graph
 
 ## L4 Verification and mitigation: "Prove it, then fix it"
 

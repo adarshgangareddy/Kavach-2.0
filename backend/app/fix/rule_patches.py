@@ -243,6 +243,11 @@ def _plan_key_size(tree: ast.Module, line: int, source: str) -> _Plan:
     return _plan_crypto(tree, line, source)  # Semgrep files old TLS versions under CWE-326 too
 
 
+def _plan_upgrade(tree: ast.Module, line: int, source: str) -> _Plan:
+    raise CannotPatch("This is fixed by upgrading the package, not by changing this file: change the version "
+                      "in your requirements as the advice above says, then re-scan.")
+
+
 def _plan_password_hash(tree: ast.Module, line: int, source: str) -> _Plan:
     raise CannotPatch("Moving passwords to a slow hash changes how they are stored and checked, and needs a "
                       "library such as argon2-cffi. Old hashes have to be re-hashed when each user next logs in.")
@@ -251,4 +256,4 @@ def _plan_password_hash(tree: ast.Module, line: int, source: str) -> _Plan:
 PLANNERS.update({"CWE-798": _checked("secret", _plan_secret), "CWE-259": _checked("secret", _plan_secret),
                  "CWE-327": _checked("other", _plan_crypto), "CWE-295": _checked("other", _plan_cert),
                  "CWE-330": _checked("random", _plan_random), "CWE-326": _checked("other", _plan_key_size),
-                 "CWE-916": _plan_password_hash})
+                 "CWE-916": _plan_password_hash, "CWE-1395": _plan_upgrade})

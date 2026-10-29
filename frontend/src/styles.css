@@ -550,3 +550,8 @@ img, svg, canvas { max-width: 100%; }
 }
 .effects-toggle.paused { border-color: rgba(245, 158, 11, 0.55); }
 .effects-toggle.paused .effects-dot { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+
+/* Fix-watcher advisories */
+.pill.advisory { color: var(--warn); border-color: rgba(245, 158, 11, 0.5); background: rgba(245, 158, 11, 0.08);
+  text-transform: none; margin-left: 6px; }
+.fix a { overflow-wrap: anywhere; }

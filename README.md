@@ -60,6 +60,17 @@ Dashboard tests (the 3D views' 2D fallbacks):
 cd frontend && npm test
 ```
 
+### Fix-watcher (dependency security fixes)
+
+Kavach can check the exact pins in `requirements*.txt` and `pyproject.toml` against published
+security advisories (OSV). A package gets a finding only when your code imports it, placed on that
+import line, with the version to upgrade to and a link to each advisory. Packages your code never
+imports are left out.
+
+It is off unless `SENTINEL_FIXWATCH` is set: `osv` asks api.osv.dev (package names and versions only,
+never code; answers are cached for an hour), or give a path to a downloaded OSV export to stay offline.
+Docker turns it on (`docker-compose.yml`); local runs, the CLI and the commit hook stay offline.
+
 ### 3D effects and how to turn them off
 
 The dashboard draws a few views in 3D (three.js, loaded lazily in its own file). Each has a plain 2D

@@ -11,6 +11,10 @@ services:
       SENTINEL_DATA: /data
       # Plain http on localhost. Set to "true" when serving Kavach over HTTPS.
       SENTINEL_COOKIE_SECURE: "false"
+      # Fix-watcher: look up published security fixes for pinned dependencies on api.osv.dev.
+      # Sends package names and versions only, never code. "off" to disable, or a path to an
+      # OSV export file to work offline.
+      SENTINEL_FIXWATCH: "osv"
     volumes:
       - kavach-data:/data      # SQLite database, encrypted scans, vault key
     restart: unless-stopped

@@ -42,10 +42,10 @@ export default function PathFlow({ chain, selected, onSelect }) {
       <ol className="chain" aria-label="Path from user input to the risky call">
         {chain.map((step, i) => (
           <li key={i} className={`step ${step.kind}`}>
-            <small>{i === 0 && step.kind === 'source' ? 'source' : step.kind === 'sink' ? 'sink' : `step ${i}`}</small>
+            <small>{step.tag ?? (i === 0 && step.kind === 'source' ? 'source' : step.kind === 'sink' ? 'sink' : `step ${i}`)}</small>
             <button type="button" className={`step-button ${i === selected ? 'selected' : ''}`}
                     aria-pressed={i === selected} onClick={() => onSelect(i)}
-                    aria-label={`${KIND_LABEL[step.kind]} ${step.label}, ${step.line ? `line ${step.line}` : 'in another file'}`}>
+                    aria-label={`${step.tag ?? KIND_LABEL[step.kind]} ${step.label}, ${step.line ? `line ${step.line}` : 'in another file'}`}>
               <code>{step.label}</code>
               <span className="muted small">{step.line ? `line ${step.line}` : 'in another file'}</span>
             </button>

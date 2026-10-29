@@ -25,6 +25,12 @@ function functionSpan(lines, name) {
  * `kind` is source | function | sink; `line` is null when the step is in another file.
  */
 export function chainFor(finding, text) {
+  if (finding.detected_at === 'watch') {  // fix-watcher: the pinned package, then where the code imports it
+    return [
+      { label: finding.source, kind: 'source', tag: 'dependency', line: null },
+      ...finding.path.map((label) => ({ label, kind: 'sink', tag: 'used here', line: finding.line })),
+    ]
+  }
   const steps = finding.path?.length ? finding.path : [finding.sink].filter(Boolean)
   const labels = [finding.source, ...steps].filter(Boolean)
   const lines = (text ?? '').split('\n')

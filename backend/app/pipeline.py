@@ -121,11 +121,16 @@ def build_findings(scan_id: str, candidates: list[Candidate], *, started: float,
     elapsed = time.monotonic() - started
     prefix = scan_id.removeprefix("S-")
     findings = [
-        to_finding(c, f"F-{prefix}-{i:03d}", scan_id, detected_at=detected_at,
+        to_finding(c, f"F-{prefix}-{i:03d}", scan_id, detected_at=_detected_at(c, detected_at),
                    introduced_in=introduced_in, elapsed_s=elapsed)
         for i, c in enumerate(deduplicate(candidates), start=1)
     ]
     return sort_by_priority(ranker.apply(findings))
+
+
+def _detected_at(cand: Candidate, default: DetectedAt) -> DetectedAt:
+    """Fix-watcher leads say so; everything else keeps the stage the scan ran at."""
+    return DetectedAt.WATCH if "fixwatch" in cand.detector.split("+") else default
 
 
 def severity_counts(findings: list[Finding]) -> dict[str, int]:

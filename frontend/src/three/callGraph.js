@@ -9,7 +9,8 @@ const sinkKey = (f) => `sink:${f.sink || f.path.at(-1)}@${f.file}:${f.line}`
 
 /** A finding with a traced path: a user-input source and at least one step. */
 export function isTraced(f) {
-  return Boolean(f.source) && Array.isArray(f.path) && f.path.length > 0
+  return f.detected_at !== 'watch'  // fix-watcher leads trace a dependency, not user input
+    && Boolean(f.source) && Array.isArray(f.path) && f.path.length > 0
 }
 
 /** The chain of labels for one finding: source, the functions it passes through, then the sink. */

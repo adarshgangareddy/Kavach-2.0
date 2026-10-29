@@ -8,6 +8,7 @@ from app.detect.adapters import BanditDetector, SemgrepDetector
 from app.detect.base import Detector
 from app.detect.rules import RulesDetector
 from app.detect.taint import TaintDetector
+from app.fixwatch.detector import FixWatchDetector
 
 _registry: dict[str, Detector] = {}
 _override: list[Detector] | None = None
@@ -45,3 +46,4 @@ register(TaintDetector())
 register(BanditDetector())
 register(SemgrepDetector())
 register(RulesDetector())
+register(FixWatchDetector())  # off unless SENTINEL_FIXWATCH is set

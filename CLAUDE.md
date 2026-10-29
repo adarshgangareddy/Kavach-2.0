@@ -30,6 +30,7 @@ Track progress in docs/CHECKLIST.md: update it whenever a feature is finished or
 - L2 detection plug-in point: backend/app/detect/base.py (Detector, Candidate), registry.py
 - L2 taint: backend/app/detect/propagation.py (ast tracer), taint.py (detector), rules in backend/sentinel-rules.toml
 - L2 rule layer: backend/app/detect/rules.py (secrets + weak crypto AST checks; never store secret values)
+- Fix-watcher: backend/app/fixwatch/ (deps, advisories via OSV or offline file, usage, detector; off unless SENTINEL_FIXWATCH)
 - L2 ranking: backend/app/rank/ (features, JSON model, train.py, priority sort)
 - L3 early detection: backend/app/early/ (incremental.py, hook.py, scope.py), backend/app/cli.py
 - Auth: backend/app/auth.py (Argon2id, JWT cookie), get_current_user in main.py, users + owner scoping in store.py; secrets in backend/.env (see .env.example)

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api.js'
 import { cweTitle, useCatalog } from '../App.jsx'
-import { ErrorBox, SeverityPill, Spinner, StatusPill, TierPill, plainSummary } from '../components.jsx'
+import { ErrorBox, LinkedText, SeverityPill, Spinner, StatusPill, TierPill, isAdvisory, plainSummary } from '../components.jsx'
 import PathFlow from '../components/PathFlow.jsx'
 import ShieldLock from '../components/ShieldLock.jsx'
 import VerifiedBadge, { isProven } from '../components/VerifiedBadge.jsx'
@@ -395,7 +395,7 @@ export default function FindingView({ findingId }) {
       <section className="card fix-card">
         <p className="eyebrow">Step 3 · Fix and re-check</p>
         <h2>How to fix it</h2>
-        <p className="fix">{finding.fix_suggestion}</p>
+        <p className="fix"><LinkedText text={finding.fix_suggestion} /></p>
         <ol className="next-steps">
           <li>
             Apply Kavach's suggested patch, or edit the code below yourself. The problem is on{' '}
@@ -428,9 +428,13 @@ export default function FindingView({ findingId }) {
           <SourceView text={source.text} error={source.error} line={finding.line} focus={chain[step]?.line ?? null} />
         </section>
         <section className="card">
-          <h2>How the data gets there</h2>
+          <h2>{isAdvisory(finding) ? 'Where the package is used' : 'How the data gets there'}</h2>
           <PathFlow chain={chain} selected={step} onSelect={pickStep} />
-          <p className="muted small">{TIER_HELP[finding.confidence_tier]}</p>
+          <p className="muted small">
+            {isAdvisory(finding)
+              ? 'Found by the fix-watcher: this pinned version has published security fixes, and this file imports it.'
+              : TIER_HELP[finding.confidence_tier]}
+          </p>
         </section>
       </div>
 
