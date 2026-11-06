@@ -1,5 +1,5 @@
-# pocketrocket-t2-04
-Official HackFest 2026 repository for team PocketRocket (T2-04).
+# Kavach 2.0
+Built at HackFest 2026 by team PocketRocket (T2-04).
 
 ## Kavach
 
@@ -7,6 +7,22 @@ A security scanner for Python Flask apps. It takes in code, runs detectors, scor
 classifies the findings, catches issues at commit and PR time, and tracks everything on a
 dashboard. See [docs/prd.md](docs/prd.md) for the design and
 [docs/CHECKLIST.md](docs/CHECKLIST.md) for what is done and what remains.
+
+### Project structure
+
+| Folder | What is in it |
+|---|---|
+| `backend/` | The API and scanner (Python, FastAPI): `app/detect` (detectors), `app/fix` (patch suggester), `app/fixwatch` (dependency advisories), `app/rank` (ML ranker), `app/report` (scores, SARIF, PDF), `tests/` |
+| `frontend/` | The dashboard (React, Vite, three.js): `src/pages`, `src/components`, `src/three` (3D views) |
+| `telemetry/` | `kavach_telemetry.py`, the file a Flask app adds to send attack alerts to Kavach |
+| `demo/` | `monitored-app/`, a small safe Flask shop for the Monitoring demo |
+| `targets/` | Deliberately vulnerable test apps used for evaluation (see `targets/README.md`); never deploy them |
+| `eval/` | `run.py` and the results: Kavach vs Bandit and Semgrep, ablation, patch re-test |
+| `scripts/` | `install-hook.sh`, the pre-commit hook installer |
+| `docs/` | The design (`prd.md`) and the progress checklist |
+| `.github/` | CI: tests on every pull request and the PR security scan |
+
+`CLAUDE.md` and `.claude/` hold notes and settings for the AI coding assistant used to build this; you can ignore them.
 
 ### Run with Docker (one command)
 
