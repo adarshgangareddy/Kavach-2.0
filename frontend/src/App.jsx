@@ -134,19 +134,17 @@ export default function App() {
           Kavach
         </a>
         {!user && (
-          <nav className="topnav" aria-label="Main Navigation">
-            <a href="#product" className="navlink">Product</a>
-            <a href="#how-it-works" className="navlink">How it works</a>
-            <a href="#privacy" className="navlink">Privacy</a>
-            <a href="https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04#readme" target="_blank" rel="noreferrer" className="navlink">
-              Docs
-            </a>
-            <a href="https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04" target="_blank" rel="noreferrer" className="navlink">
-              GitHub
-            </a>
-            <a href="#/login" className="small-button">Sign in</a>
-            <ReduceEffectsToggle />
-          </nav>
+          <>
+            <nav className="topnav-center" aria-label="Main Navigation">
+              <a href="#product" className="navlink">Product</a>
+              <a href="#how-it-works" className="navlink">How it works</a>
+              <a href="#privacy" className="navlink">Privacy</a>
+            </nav>
+            <div className="topnav-actions">
+              <ReduceEffectsToggle />
+              <a href="#/login" className="button small-button nav-signin-btn">Sign in</a>
+            </div>
+          </>
         )}
         {user && (
           <nav className="topnav">

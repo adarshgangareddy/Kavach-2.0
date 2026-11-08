@@ -13,7 +13,7 @@ const WORKFLOW_STEPS = [
   {
     n: 1,
     title: 'Register or open project',
-    text: 'Register a local Flask project for monitoring or select source files to scan directly.',
+    text: 'Register a local project for monitoring or select source files to scan directly.',
   },
   {
     n: 2,
@@ -101,7 +101,7 @@ function RegisteredProjects() {
         <div>
           <h2>Registered Projects</h2>
           <p className="muted small">
-            Monitored Flask applications configured for telemetry and vulnerability alerts.
+            Monitored applications configured for telemetry and vulnerability alerts.
           </p>
         </div>
         {!registering && (
@@ -227,8 +227,8 @@ function ScanForm() {
     (tab === 'snippet' && code.trim())
 
   const hint = {
-    snippet: 'Paste a Flask route or helper function. The AST tracer will detect untrusted source-to-sink flows.',
-    zip: 'A .zip archive of a Python / Flask project (up to 50 MB). Tests, venvs, and vendored libraries are filtered.',
+    snippet: 'Paste a route or helper function. The AST tracer will detect untrusted source-to-sink flows.',
+    zip: 'A .zip archive of a Python project (up to 50 MB). Tests, venvs, and vendored libraries are filtered.',
     github: 'A public GitHub repository (e.g. https://github.com/owner/repo) for shallow cloning and analysis.',
   }[tab]
 

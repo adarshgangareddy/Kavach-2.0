@@ -161,7 +161,7 @@ export default function Welcome({ onSignedIn, initialAuth = false }) {
         <div className="hero-content">
           <div className="hero-pill-tag">
             <span className="hero-pill-dot" />
-            <span>Kavach 2.0 · Python & Flask Security Scanner</span>
+            <span>KAVACH | DEVELOPER SECURITY</span>
           </div>
 
           <h1 id="hero-title" className="hero-headline">
@@ -170,7 +170,7 @@ export default function Welcome({ onSignedIn, initialAuth = false }) {
 
           <p className="hero-subtext">
             Deterministic static taint analysis tracks untrusted inputs across functions directly into dangerous sinks.
-            Review auto-generated AST patches and protect Git workflows without sharing your source code.
+            Review proposed patches and protect Git workflows with fast, local-first code analysis.
           </p>
 
           <div className="hero-actions">
@@ -220,7 +220,7 @@ export default function Welcome({ onSignedIn, initialAuth = false }) {
             </div>
             <div className="trust-item">
               <span className="trust-check">✓</span>
-              <span>AES-256-GCM vault for team data</span>
+              <span>Encrypted workspace vault for team data</span>
             </div>
           </div>
         </div>
@@ -468,7 +468,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
             <h3>Team & CI Integration</h3>
             <ul className="privacy-list muted small">
               <li>
-                <strong>Encrypted storage at rest:</strong> Uploaded scan workspaces are sealed with AES-256-GCM vault encryption on the server.
+                <strong>Encrypted storage at rest:</strong> Uploaded scan workspaces are sealed with authenticated vault encryption on the server.
               </li>
               <li>
                 <strong>Account-isolated access:</strong> Scans are linked to your authenticated owner ID; other users receive 404 responses for unauthorized records.
@@ -497,7 +497,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
             Sign in
           </button>
         </div>
-        <p>Kavach 2.0 · Python & Flask Vulnerability Scanner · Hack Fest 2026</p>
+        <p>© 2026 Kavach · Security for Your Development Workflow</p>
       </footer>
 
       {/* WELCOME / SIGN IN MODAL (INSPIRED BY SCREENSHOT 2) */}
@@ -564,22 +564,13 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                   </div>
                 </div>
 
-                {/* Accurate OAuth Backend Status Card */}
-                <div className="oauth-status-box">
+                {/* Concise GitHub Sign-in Notice */}
+                <div className="oauth-status-box clean-notice">
                   <div className="oauth-status-header">
-                    <span className="badge warn">Backend Setup Required</span>
-                    <span className="small muted">OAuth Endpoint Inactive</span>
+                    <span className="badge warn">GitHub sign-in is not configured yet</span>
                   </div>
                   <p className="small muted">
-                    GitHub OAuth is not yet configured on this backend instance. To enable direct GitHub sign-in, the following configuration is needed:
-                  </p>
-                  <ul className="small mono oauth-needed-list">
-                    <li>GITHUB_CLIENT_ID</li>
-                    <li>GITHUB_CLIENT_SECRET</li>
-                    <li>Backend route: /api/auth/github</li>
-                  </ul>
-                  <p className="small muted">
-                    You can continue scanning locally without an account, or sign in using email credentials below.
+                    GitHub sign-in is not configured yet on this instance. You can start analyzing code immediately with local mode (no account required), or sign in with your email credentials.
                   </p>
                 </div>
 

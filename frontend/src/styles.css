@@ -53,14 +53,33 @@ h3 { font-size: 13px; margin: 0 0 8px; color: var(--muted); text-transform: uppe
 .small { font-size: 12px; }
 
 .topbar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 12px 24px; background: rgba(7, 10, 18, 0.72); border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 12px 28px; background: rgba(7, 10, 18, 0.78); border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  position: sticky; top: 0; z-index: 50;
 }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 16px; color: var(--text); }
 .brand:hover { text-decoration: none; }
 .brand svg { color: var(--accent); }
+
+.topnav-center { display: flex; align-items: center; gap: 20px; }
+.topnav-center .navlink {
+  font-size: 13.5px; font-weight: 500; color: var(--muted); text-decoration: none;
+  transition: color 0.15s ease;
+}
+.topnav-center .navlink:hover { color: #ffffff; text-decoration: none; }
+
+.topnav-actions { display: flex; align-items: center; gap: 10px; }
+.nav-signin-btn {
+  background: var(--surface-2); border: 1px solid var(--border); color: #ffffff;
+  padding: 6px 14px; border-radius: 8px; font-weight: 500; text-decoration: none;
+  transition: all 0.15s ease;
+}
+.nav-signin-btn:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.25); text-decoration: none; }
+
+@media (max-width: 720px) {
+  .topnav-center { display: none; }
+}
 
 .container { max-width: 1180px; margin: 0 auto; padding: 20px 24px 48px; display: grid; gap: 16px; }
 .card {

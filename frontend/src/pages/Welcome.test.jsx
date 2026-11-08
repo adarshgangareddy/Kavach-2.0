@@ -62,7 +62,7 @@ describe('Welcome Component (Public Homepage & Welcome Experience)', () => {
     expect(screen.getAllByText(/CWE-78/i).length).toBeGreaterThan(0)
   })
 
-  it('opens GitHub auth dialog and displays accurate backend setup requirements', () => {
+  it('opens GitHub auth dialog and displays clean unconfigured notice', () => {
     renderWelcome()
     const ghBtn = screen.getByRole('button', { name: /continue with github/i })
     fireEvent.click(ghBtn)
@@ -70,9 +70,8 @@ describe('Welcome Component (Public Homepage & Welcome Experience)', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(screen.getByRole('heading', { level: 2, name: /sign in with github/i })).toBeTruthy()
     expect(screen.getByText(/first-time sign-in/i)).toBeTruthy()
-    expect(screen.getByText(/backend setup required/i)).toBeTruthy()
-    expect(screen.getByText(/GITHUB_CLIENT_ID/i)).toBeTruthy()
-    expect(screen.getByText(/GITHUB_CLIENT_SECRET/i)).toBeTruthy()
+    expect(screen.getAllByText(/github sign-in is not configured yet/i).length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: /continue locally \(no account\)/i })).toBeTruthy()
   })
 
   it('supports switching to email/password authentication tab', () => {
