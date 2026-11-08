@@ -42,16 +42,16 @@ describe('Welcome Component (Public Homepage & Welcome Experience)', () => {
   it('renders the 3-step "How Kavach works" and transparent privacy sections', () => {
     renderWelcome()
     expect(screen.getByRole('heading', { name: /from raw input to verified fix in three steps/i })).toBeTruthy()
-    expect(screen.getByText(/100% on-device local mode/i)).toBeTruthy()
+    expect(screen.getByText(/local cli requires no account/i)).toBeTruthy()
     expect(screen.getByRole('heading', { name: /transparent data boundaries by design/i })).toBeTruthy()
-    expect(screen.getByText(/zero source code transmission/i)).toBeTruthy()
+    expect(screen.getByText(/local processing/i)).toBeTruthy()
   })
 
   it('renders the illustrative glass preview panels with high contrast code and verified patch', () => {
     const { container } = renderWelcome()
-    expect(screen.getByText(/illustrative ast trace preview/i)).toBeTruthy()
+    expect(screen.getByText(/illustrative preview/i)).toBeTruthy()
     expect(container.querySelector('.code-filename').textContent).toContain('documents.py')
-    expect(screen.getByText(/✓ verified patch/i)).toBeTruthy()
+    expect(screen.getByText(/suggested fix/i)).toBeTruthy()
   })
 
   it('switches vulnerability class in the local interactive explorer', () => {

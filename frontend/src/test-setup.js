@@ -29,3 +29,16 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   })
 }
 
+// jsdom does not implement HTMLCanvasElement.prototype.getContext
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = () => ({
+    clearRect: () => {},
+    beginPath: () => {},
+    arc: () => {},
+    fill: () => {},
+    fillRect: () => {},
+    stroke: () => {},
+  })
+}
+
+

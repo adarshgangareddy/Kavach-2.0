@@ -575,71 +575,87 @@ img, svg, canvas { max-width: 100%; }
   overflow: visible;
 }
 
-/* Warm amber/orange flowing light background and fine dotted grid */
-.warm-amber-glow {
+/* Warm amber/orange flowing light background and fine dotted grid (PatternWaves) */
+.pattern-waves-container {
   position: absolute;
-  top: -120px;
+  top: -100px;
   left: 50%;
   transform: translateX(-50%);
   width: 100vw;
   max-width: 1600px;
-  height: 900px;
+  height: 860px;
   pointer-events: none;
   z-index: 0;
   overflow: hidden;
 }
 
-.dot-grid-canvas {
+.pattern-waves-backlight {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.2px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 25%, transparent 75%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, black 25%, transparent 75%);
-  opacity: 0.85;
+  pointer-events: none;
 }
 
-.amber-orb {
+.amber-glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(85px);
   will-change: transform, opacity;
 }
 
-.amber-orb.primary-orb {
-  top: 180px;
-  left: 20%;
-  width: 540px;
-  height: 440px;
-  background: radial-gradient(circle, rgba(245, 158, 11, 0.16) 0%, rgba(234, 88, 12, 0.09) 55%, transparent 75%);
+.amber-glow-orb.orb-center {
+  top: 140px;
+  left: 18%;
+  width: 580px;
+  height: 460px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.17) 0%, rgba(234, 88, 12, 0.08) 50%, transparent 75%);
   animation: amber-drift 16s ease-in-out infinite alternate;
 }
 
-.amber-orb.secondary-orb {
-  top: 260px;
-  right: 18%;
-  width: 480px;
-  height: 380px;
-  background: radial-gradient(circle, rgba(249, 115, 22, 0.13) 0%, rgba(217, 119, 6, 0.06) 50%, transparent 75%);
+.amber-glow-orb.orb-right {
+  top: 220px;
+  right: 14%;
+  width: 520px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(249, 115, 22, 0.14) 0%, rgba(217, 119, 6, 0.06) 55%, transparent 75%);
   animation: amber-drift 14s ease-in-out 2s infinite alternate-reverse;
+}
+
+.pattern-waves-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 40%, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 40%, black 30%, transparent 80%);
+  opacity: 0.9;
+}
+
+.pattern-waves-static-fallback {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(245, 158, 11, 0.15) 1.2px, transparent 1.2px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 40%, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 40%, black 30%, transparent 80%);
+  opacity: 0.75;
+}
+
+[data-effects="off"] .amber-glow-orb {
+  animation: none !important;
+  opacity: 0.75 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amber-glow-orb {
+    animation: none !important;
+    opacity: 0.75 !important;
+  }
 }
 
 @keyframes amber-drift {
   0% { transform: translate(0, 0) scale(1); opacity: 0.7; }
   50% { transform: translate(-30px, 25px) scale(1.08); opacity: 0.95; }
   100% { transform: translate(25px, -15px) scale(0.96); opacity: 0.75; }
-}
-
-[data-effects="off"] .amber-orb {
-  animation: none !important;
-  opacity: 0.75 !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .amber-orb {
-    animation: none !important;
-    opacity: 0.75 !important;
-  }
 }
 
 /* --- Hero Section --- */
@@ -1487,4 +1503,203 @@ img, svg, canvas { max-width: 100%; }
     justify-content: center;
   }
 }
+
+/* --- Password field & forgot password controls --- */
+.password-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.password-row input {
+  padding-right: 56px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 6px;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.password-toggle-btn:hover {
+  color: var(--text);
+}
+
+.forgot-password-link-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.forgot-password-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --- Engine status & dots --- */
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.status-dot.ok {
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+}
+
+.status-dot.critical {
+  background: var(--critical);
+  box-shadow: 0 0 6px var(--critical);
+}
+
+.badge.critical {
+  color: var(--critical);
+  border-color: var(--critical);
+}
+
+/* --- Signed-in App Shell & Initial Scan Workflow (Screenshot 3) --- */
+.signed-in-home {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.signed-in-hero {
+  padding: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero-head-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 74ch;
+}
+
+.hero-head-block h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0;
+  color: #FFFFFF;
+}
+
+.hero-head-block p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.workflow-steps-grid {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workflow-step-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  backdrop-filter: blur(10px);
+}
+
+.project-registry-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.project-register-form {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-action-row {
+  display: flex;
+  gap: 8px;
+}
+
+.app-key-banner {
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.app-key-code {
+  background: #050811;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: #38BDF8;
+  font-size: 13px;
+  user-select: all;
+  word-break: break-all;
+}
+
+.empty-state-box {
+  background: rgba(148, 163, 184, 0.04);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+}
+
+.project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.project-item-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 860px) {
+  .workflow-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 

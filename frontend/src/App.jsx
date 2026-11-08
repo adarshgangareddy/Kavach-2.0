@@ -43,17 +43,40 @@ function useSession() {
   return [user, setUser]
 }
 
-function DetectorBadge() {
-  const [detectors, setDetectors] = useState(null)
+function EngineStatusBadge() {
+  const [status, setStatus] = useState(null)
+  const [detectors, setDetectors] = useState([])
+
   useEffect(() => {
-    api.detectors().then(setDetectors).catch(() => setDetectors([]))
+    let active = true
+    Promise.all([
+      api.health().catch(() => ({ status: 'offline' })),
+      api.detectors().catch(() => []),
+    ]).then(([h, d]) => {
+      if (active) {
+        setStatus(h?.status === 'ok' ? 'online' : 'offline')
+        setDetectors(Array.isArray(d) ? d : [])
+      }
+    })
+    return () => { active = false }
   }, [])
-  if (detectors === null) return null
+
+  if (!status) return null
+
+  const isOnline = status === 'online'
   const ready = detectors.filter((d) => d.available)
+
   return (
-    <span className={`badge ${ready.length ? 'ok' : 'warn'}`}
-          title={detectors.map((d) => `${d.name}: ${d.available ? 'ready' : 'not installed'}`).join('\n')}>
-      {ready.length ? `Detectors: ${ready.map((d) => d.name).join(', ')}` : 'No detectors installed'}
+    <span
+      className={`badge ${isOnline ? (ready.length ? 'ok' : 'warn') : 'critical'}`}
+      title={
+        isOnline
+          ? `Engine connected.\nReady detectors: ${ready.map((d) => d.name).join(', ') || 'None'}`
+          : 'Backend engine is currently unreachable'
+      }
+    >
+      <span className={`status-dot ${isOnline ? 'ok' : 'critical'}`} />
+      {isOnline ? (ready.length ? `Engine: Connected (${ready.length})` : 'Engine: No Detectors') : 'Engine: Offline'}
     </span>
   )
 }
@@ -115,6 +138,12 @@ export default function App() {
             <a href="#product" className="navlink">Product</a>
             <a href="#how-it-works" className="navlink">How it works</a>
             <a href="#privacy" className="navlink">Privacy</a>
+            <a href="https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04#readme" target="_blank" rel="noreferrer" className="navlink">
+              Docs
+            </a>
+            <a href="https://github.com/Hackfest-X-Saividya/pocketrocket-t2-04" target="_blank" rel="noreferrer" className="navlink">
+              GitHub
+            </a>
             <a href="#/login" className="small-button">Sign in</a>
             <ReduceEffectsToggle />
           </nav>
@@ -123,7 +152,7 @@ export default function App() {
           <nav className="topnav">
             <a href="#/" className={route === '/' ? 'navlink active' : 'navlink'}>Scans</a>
             <a href="#/monitor" className={route === '/monitor' ? 'navlink active' : 'navlink'}>Monitoring</a>
-            <DetectorBadge />
+            <EngineStatusBadge />
             <ReduceEffectsToggle />
             <span className="muted small user-email" title={`Signed in as ${user.email} (${user.role})`}>
               {user.email}
