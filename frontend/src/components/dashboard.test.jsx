@@ -16,7 +16,16 @@ const FINDINGS = [{ severity: 9.3 }, { severity: 9.1 }, { severity: 7.5 }, { sev
 
 beforeEach(() => {
   window.localStorage.clear()
-  window.matchMedia = (q) => ({ matches: q.includes('hover'), addEventListener: () => {}, removeEventListener: () => {} })
+  window.matchMedia = (q) => ({
+    matches: q.includes('hover'),
+    media: q,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })
 })
 afterEach(cleanup)
 

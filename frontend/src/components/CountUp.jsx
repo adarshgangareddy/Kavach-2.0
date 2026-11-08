@@ -21,8 +21,9 @@ export default function CountUp({ value, duration = 700 }) {
     const start = performance.now()
     const begin = from.current
     let frame
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / duration)
+    const step = () => {
+      const now = performance.now()
+      const t = Math.max(0, Math.min(1, (now - start) / duration))
       setShown(Math.round(begin + (value - begin) * ease(t)))
       if (t < 1) frame = requestAnimationFrame(step)
       else from.current = value

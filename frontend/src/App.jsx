@@ -5,6 +5,7 @@ import PageTransition from './components/PageTransition.jsx'
 import ReduceEffectsToggle from './components/ReduceEffectsToggle.jsx'
 import Home from './pages/Home.jsx'
 import Login from './pages/Login.jsx'
+import Welcome from './pages/Welcome.jsx'
 import ScanView from './pages/ScanView.jsx'
 import FindingView from './pages/FindingView.jsx'
 import Monitor from './pages/Monitor.jsx'
@@ -40,13 +41,6 @@ function useSession() {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, signedOut)
   }, [])
   return [user, setUser]
-}
-
-/** Protected route wrapper: renders the page only for a signed-in user, else the login form. */
-function RequireAuth({ user, onSignedIn, children }) {
-  if (user === undefined) return <Spinner label="Checking your session" />
-  if (user === null) return <Login onSignedIn={onSignedIn} />
-  return children
 }
 
 function DetectorBadge() {
@@ -86,10 +80,23 @@ export default function App() {
   let page
   const scan = route.match(/^\/scans\/(S-[0-9a-f]{8})$/)
   const finding = route.match(/^\/findings\/(F-[0-9a-f]{8}-\d+)$/)
-  if (scan) page = <ScanView scanId={scan[1]} />
-  else if (finding) page = <FindingView findingId={finding[1]} />
-  else if (route === '/monitor') page = <Monitor />
-  else page = <Home />
+
+  if (user === undefined) {
+    page = <Spinner label="Checking your session" />
+  } else if (!user) {
+    // Unauthenticated public experience
+    page = <Welcome onSignedIn={signedIn} initialAuth={route === '/login'} />
+  } else if (scan) {
+    page = <ScanView scanId={scan[1]} />
+  } else if (finding) {
+    page = <FindingView findingId={finding[1]} />
+  } else if (route === '/monitor') {
+    page = <Monitor />
+  } else if (route === '/welcome') {
+    page = <Welcome onSignedIn={signedIn} user={user} />
+  } else {
+    page = <Home />
+  }
 
   return (
     <CatalogContext.Provider value={catalog}>
@@ -103,7 +110,15 @@ export default function App() {
           </svg>
           Kavach
         </a>
-        {!user && <nav className="topnav"><ReduceEffectsToggle /></nav>}
+        {!user && (
+          <nav className="topnav" aria-label="Main Navigation">
+            <a href="#product" className="navlink">Product</a>
+            <a href="#how-it-works" className="navlink">How it works</a>
+            <a href="#privacy" className="navlink">Privacy</a>
+            <a href="#/login" className="small-button">Sign in</a>
+            <ReduceEffectsToggle />
+          </nav>
+        )}
         {user && (
           <nav className="topnav">
             <a href="#/" className={route === '/' ? 'navlink active' : 'navlink'}>Scans</a>
@@ -117,10 +132,8 @@ export default function App() {
           </nav>
         )}
       </header>
-      <main className="container">
-        <RequireAuth user={user} onSignedIn={signedIn}>
-          <PageTransition routeKey={route}>{page}</PageTransition>
-        </RequireAuth>
+      <main className={!user ? 'container full-welcome' : 'container'}>
+        <PageTransition routeKey={route}>{page}</PageTransition>
       </main>
     </CatalogContext.Provider>
   )
